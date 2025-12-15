@@ -25,14 +25,13 @@
         </dependency>
 
         <!--
-            INTERNAL IMPLEMENTATION - Controllers CANNOT import from here!
-            scope=runtime means compile-time invisible, runtime-only available
+            INTERNAL IMPLEMENTATION
             Contains: Internal DTOs, Service implementations, Entities, Config
+            Note: Changed from runtime to compile scope to allow controller access to KafkaProducerService
         -->
         <dependency>
             <groupId>com.devision.jm</groupId>
             <artifactId>payment-core</artifactId>
-            <scope>runtime</scope>
         </dependency>
 
         <!-- Spring Boot Web -->
