@@ -27,11 +27,12 @@
         <!--
             INTERNAL IMPLEMENTATION
             Contains: Internal DTOs, Service implementations, Entities, Config
-            Note: Changed from runtime to compile scope to allow controller access to KafkaProducerService
+            Runtime scope enforces that controllers only use external interfaces from payment-api
         -->
         <dependency>
             <groupId>com.devision.jm</groupId>
             <artifactId>payment-core</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Spring Boot Web -->

@@ -3,26 +3,27 @@ package com.devision.jm.payment.controller;
 import com.devision.jm.payment.api.external.dto.PaymentSuccessRequest;
 import com.devision.jm.payment.api.external.dto.StripeResponse;
 import com.devision.jm.payment.api.external.dto.SubscriptionRequest;
-import com.devision.jm.payment.api.internal.dto.PaymentCompletedEvent;
-import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
+import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
 
-import java.time.LocalDateTime;
-
+/**
+ * Payment Controller
+ *
+ * REST endpoints for payment operations.
+ * Uses only external interfaces from payment-api module.
+ * Internal DTOs and Kafka logic are encapsulated in payment-core.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
 
   private final PaymentExternalApi paymentExternalApi;
-  private final KafkaProducerService kafkaProducerService;
 
-  public PaymentController(PaymentExternalApi paymentExternalApi, KafkaProducerService kafkaProducerService) {
+  public PaymentController(PaymentExternalApi paymentExternalApi) {
     this.paymentExternalApi = paymentExternalApi;
-    this.kafkaProducerService = kafkaProducerService;
   }
 
   @PostMapping("/checkout")
@@ -44,15 +45,9 @@ public class PaymentController {
     log.info("Received payment success request for userId: {}, planType: {}",
             request.getUserId(), request.getPlanType());
 
-    // Create and publish the payment completed event
-    PaymentCompletedEvent event = PaymentCompletedEvent.builder()
-            .userId(request.getUserId())
-            .planType(request.getPlanType())
-            .paidAt(LocalDateTime.now())
-            .build();
+    // Delegate to service layer (internal DTOs handled in payment-core)
+    String result = paymentExternalApi.processPaymentSuccess(request);
 
-    kafkaProducerService.publishPaymentCompletedEvent(event);
-
-    return ResponseEntity.ok("Payment success event published for userId: " + request.getUserId());
+    return ResponseEntity.ok(result);
   }
 }
