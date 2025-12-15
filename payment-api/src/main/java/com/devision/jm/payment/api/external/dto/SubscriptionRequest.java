@@ -28,4 +28,19 @@ public class SubscriptionRequest {
     public String getCurrency() {
         return currency;
     }
+    public void setCompanyId(UUID companyId) {
+        this.companyId = companyId;
+    }
+    public void setApplicantId(UUID applicantId) {
+        this.applicantId = applicantId;
+    }
+    public void setPayerEmail(String payerEmail) {
+        this.payerEmail = payerEmail;
+    }
+    public void setPlanType(String planType) {
+        this.planType = planType;
+    }
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
 }

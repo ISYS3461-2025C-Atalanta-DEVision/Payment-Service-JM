@@ -19,10 +19,9 @@ spring:
 
   # Redis Configuration
   #redis:
-    #host: localhost
-    #port: 6379
-    #password: ""
- 
+  #host: localhost
+  #port: 6379
+  #password: ""
 
   # Kafka Configuration (A.3.2)
   kafka:
@@ -79,7 +78,7 @@ logging:
 
 # Stripe
 stripe:
-  secret-key: ${STRIPE_SECRET_KEY} 
+  secret-key: ${STRIPE_SECRET_KEY}
   success-url: "http://localhost:8080/payment/success"
   cancel-url: "http://localhost:8080/payment/cancel"
 
