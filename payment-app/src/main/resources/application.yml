@@ -1,0 +1,187 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: payment-service
+
+  # Disable JPA/H2 (using MongoDB)
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+
+  # Kafka Configuration (A.3.2 - Microservice Communication)
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  # MongoDB Configuration
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+      database: authdb
+
+    # Redis Configuration (for token revocation - 2.3.2)
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 5
+          min-idle: 2
+
+  # Email Configuration (Brevo SMTP) - Requirements 1.1.3, 6.1.2
+  #mail:
+   # host: ${SMTP_HOST}
+    #port: ${SMTP_PORT}
+    #username: ${SMTP_USERNAME}
+    #password: ${SMTP_PASSWORD}
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  # Google OAuth2 Configuration (1.3.1, 2.3.1)
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+              - openid
+            redirect-uri: "${OAUTH2_REDIRECT_URI:https://api-gateway-khhr.onrender.com/auth-service/login/oauth2/code/google}"
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+
+# Eureka Client Configuration (Service Discovery - D.3.1)
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}
+    register-with-eureka: ${EUREKA_ENABLED}
+    fetch-registry: ${EUREKA_ENABLED}
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+# Internal API Key for Gateway-to-Service communication
+internal:
+  api-key: ${INTERNAL_API_KEY}
+  api-key-validation:
+    enabled: ${INTERNAL_API_KEY_VALIDATION}
+
+# JWE Configuration (2.1.2)
+jwe:
+  secret: ${JWT_SECRET}
+  access-token-expiration: 900000      # 15 minutes in milliseconds
+  refresh-token-expiration: 604800000  # 7 days in milliseconds
+  issuer: devision-jm-auth-service
+
+# Application Configuration
+app:
+  name: ${APP_NAME}
+  frontend-url: ${FRONTEND_URL}
+  from-email: ${FROM_EMAIL}
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.devision.jm.auth: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.data.redis: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# OpenAPI/Swagger Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+---
+# Production Profile (for Render deployment)
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  # MongoDB for production (MongoDB Atlas)
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: true  # Upstash requires SSL
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}
+    register-with-eureka: ${EUREKA_ENABLED}
+    fetch-registry: ${EUREKA_ENABLED}
+  instance:
+    hostname: ${RENDER_EXTERNAL_HOSTNAME}
+    prefer-ip-address: false
+    non-secure-port: ${PORT}
+    instance-id: ${spring.application.name}:${RENDER_SERVICE_ID}
+    home-page-url: https://${RENDER_EXTERNAL_HOSTNAME}/
+    status-page-url: https://${RENDER_EXTERNAL_HOSTNAME}/actuator/info
+    health-check-url: https://${RENDER_EXTERNAL_HOSTNAME}/actuator/health
+    secure-port-enabled: true
+    non-secure-port-enabled: false
+    secure-port: 443
+
+# Disable Swagger in production
+springdoc:
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.devision.jm.auth: INFO
+    org.springframework.security: WARN
+
+
