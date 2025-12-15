@@ -8,23 +8,23 @@ RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
 # Copy all pom.xml files first (for dependency caching)
 COPY pom.xml ./pom.xml
-COPY auth-api/pom.xml ./auth-api/pom.xml
-COPY auth-core/pom.xml ./auth-core/pom.xml
-COPY auth-app/pom.xml ./auth-app/pom.xml
+COPY payment-api/pom.xml ./payment-api/pom.xml
+COPY payment-core/pom.xml ./payment-core/pom.xml
+COPY payment-app/pom.xml ./payment-app/pom.xml
 
 # Create source directories
-RUN mkdir -p auth-api/src auth-core/src auth-app/src
+RUN mkdir -p payment-api/src payment-core/src payment-app/src
 
 # Download dependencies (cached layer)
 RUN mvn dependency:go-offline -B || true
 
 # Copy source code for all modules
-COPY auth-api/src ./auth-api/src
-COPY auth-core/src ./auth-core/src
-COPY auth-app/src ./auth-app/src
+COPY payment-api/src ./payment-api/src
+COPY payment-core/src ./payment-core/src
+COPY payment-app/src ./payment-app/src
 
-# Build all modules (auth-app depends on auth-api and auth-core)
-RUN mvn clean package -DskipTests -B -pl auth-app -am
+# Build all modules (payment-app depends on payment-api and payment-core)
+RUN mvn clean package -DskipTests -B -pl payment-app -am
 
 # Runtime image
 FROM eclipse-temurin:21-jre
@@ -37,8 +37,8 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Create non-root user for security
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
-# Copy the built jar from auth-app module
-COPY --from=builder /app/auth-app/target/*.jar app.jar
+# Copy the built jar from payment-app module
+COPY --from=builder /app/payment-app/target/*.jar app.jar
 
 # Set ownership
 RUN chown -R appuser:appgroup /app
@@ -47,11 +47,11 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Expose port (Render will override with PORT env var)
-EXPOSE 8081
+EXPOSE 8083
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8081}/actuator/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8083}/actuator/health || exit 1
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
