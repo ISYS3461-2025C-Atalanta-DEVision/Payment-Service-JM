@@ -1,6 +1,7 @@
 package com.devision.jm.payment.api.internal.dto;
 import java.util.UUID;
 
+//what payment service decides to process
 public class CheckoutCommand {
     private UUID companyId;
     private UUID applicantId;

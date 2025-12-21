@@ -3,8 +3,6 @@ package com.devision.jm.payment.service.impl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.devision.jm.payment.api.external.dto.StripeResponse;
-import com.devision.jm.payment.api.external.dto.SubscriptionRequest;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
@@ -16,7 +14,7 @@ import java.util.UUID;
 
 @Service
 public class StripeCheckoutServiceImpl implements CheckoutService {
-@Value("${stripe.secret-key}")
+    @Value("${stripe.secret-key}")
     private String secretKey;
 
     @Value("${stripe.success-url}")
@@ -27,79 +25,69 @@ public class StripeCheckoutServiceImpl implements CheckoutService {
 
     @Override
     public CheckoutSessionResult checkout(CheckoutCommand command) {
-        SubscriptionRequest req = new SubscriptionRequest();
-        req.setCompanyId(command.getCompanyId());
-        req.setApplicantId(command.getApplicantId());
-        req.setPayerEmail(command.getPayerEmail());
-        req.setPlanType(command.getPlanType());
-        req.setCurrency(command.getCurrency());
-
-        try {
-            StripeResponse response = checkoutPayment(req);
-
-            // Generate a transactionId for the result
-            UUID transactionId = UUID.randomUUID();
-
-            return new CheckoutSessionResult(response.getCheckoutUrl(), response.getSessionId(), transactionId);
-        } catch (StripeException e) {
-            throw new RuntimeException("Stripe checkout failed", e);
-        }
-    }
-
-    public StripeResponse checkoutPayment(SubscriptionRequest req) throws StripeException {
         Stripe.apiKey = secretKey;
 
-        validateRequest(req);
+        long unitAmount = amountForPlan(command.getPlanType(), command.getCurrency());
 
-        long unitAmount = amountForPlan(req.getPlanType(), req.getCurrency());
+        validateCommand(command);
 
-        SessionCreateParams params
-                = SessionCreateParams.builder()
-                        .setMode(SessionCreateParams.Mode.PAYMENT)
-                        .setSuccessUrl(successUrl)
-                        .setCancelUrl(cancelUrl)
-                        .setCustomerEmail(req.getPayerEmail())
-                        .addLineItem(
-                                SessionCreateParams.LineItem.builder()
-                                        .setQuantity(1L)
-                                        .setPriceData(
-                                                SessionCreateParams.LineItem.PriceData.builder()
-                                                        .setCurrency(req.getCurrency().toLowerCase())
-                                                        .setUnitAmount(unitAmount)
-                                                        .setProductData(
-                                                                SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                                                        .setName("Subscription Plan: " + req.getPlanType())
-                                                                        .build()
-                                                        )
-                                                        .build()
-                                        )
-                                        .build()
-                        )
-                        // metadata helps webhook identify who/what later
-                        .putMetadata("companyId", req.getCompanyId() == null ? "" : req.getCompanyId().toString())
-                        .putMetadata("applicantId", req.getApplicantId() == null ? "" : req.getApplicantId().toString())
-                        .putMetadata("planType", req.getPlanType())
-                        .build();
+        try{
+            SessionCreateParams params
+                    = SessionCreateParams.builder()
+                            .setMode(SessionCreateParams.Mode.PAYMENT)
+                            .setSuccessUrl(successUrl)
+                            .setCancelUrl(cancelUrl)
+                            .setCustomerEmail(command.getPayerEmail())
+                            .addLineItem(
+                                    SessionCreateParams.LineItem.builder()
+                                            .setQuantity(1L)
+                                            .setPriceData(
+                                                    SessionCreateParams.LineItem.PriceData.builder()
+                                                            .setCurrency(command.getCurrency().toLowerCase())
+                                                            .setUnitAmount(unitAmount)
+                                                            .setProductData(
+                                                                    SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                                                            .setName("Subscription Plan: " + command.getPlanType())
+                                                                            .build()
+                                                            )
+                                                            .build()
+                                            )
+                                            .build()
+                            )
+                            // metadata helps webhook identify who/what later
+                            .putMetadata("companyId", command.getCompanyId() == null ? "" : command.getCompanyId().toString())
+                            .putMetadata("applicantId", command.getApplicantId() == null ? "" : command.getApplicantId().toString())
+                            .putMetadata("planType", command.getPlanType())
+                            .build();
 
-        Session session = Session.create(params);
+            Session session = Session.create(params);
 
-        return new StripeResponse(session.getUrl(), session.getId());
+            return new CheckoutSessionResult(
+                    session.getUrl(),
+                    session.getId(),
+                    command.getCompanyId() != null ? command.getCompanyId() : command.getApplicantId());
+
+        } catch (StripeException e) {
+            throw new RuntimeException("Stripe API error: " + e.getMessage(), e);
+        }
     }
 
-    private void validateRequest(SubscriptionRequest req) {
-        if (req.getCompanyId() == null && req.getApplicantId() == null) {
+    
+
+    private void validateCommand(CheckoutCommand command) {
+        if (command.getCompanyId() == null && command.getApplicantId() == null) {
             throw new IllegalArgumentException("Either companyId or applicantId must be provided");
         }
-        if (req.getCompanyId() != null && req.getApplicantId() != null) {
+        if (command.getCompanyId() != null && command.getApplicantId() != null) {
             throw new IllegalArgumentException("Only one of companyId or applicantId should be provided");
         }
-        if (req.getPayerEmail() == null || req.getPayerEmail().isBlank()) {
+        if (command.getPayerEmail() == null || command.getPayerEmail().isBlank()) {
             throw new IllegalArgumentException("payerEmail must be provided");
         }
-        if (req.getPlanType() == null || req.getPlanType().isBlank()) {
+        if (command.getPlanType() == null || command.getPlanType().isBlank()) {
             throw new IllegalArgumentException("planType must be provided");
         }
-        if (req.getCurrency() == null || req.getCurrency().isBlank()) {
+        if (command.getCurrency() == null || command.getCurrency().isBlank()) {
             throw new IllegalArgumentException("currency must be provided");
         }
     }

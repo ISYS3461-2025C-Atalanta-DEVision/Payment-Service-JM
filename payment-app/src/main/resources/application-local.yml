@@ -14,8 +14,8 @@ spring:
   # MongoDB Configuration
   data:
     mongodb:
-      uri: mongodb://localhost:27017/auth_db
-      database: auth_db
+      uri: ${MONGODB_URI:mongodb://localhost:27017/payment_db}
+      
 
   # Redis Configuration
   #redis:
@@ -62,7 +62,7 @@ jwe:
   secret: local-dev-secret-key-must-be-at-least-32-characters-long
   access-token-expiration: 900000
   refresh-token-expiration: 604800000
-  issuer: devision-jm-auth-service
+  issuer: devision-jm-payment-service
 
 # Application Configuration
 app:
@@ -73,14 +73,14 @@ app:
 # Logging
 logging:
   level:
-    com.devision.jm.auth: DEBUG
+    com.devision.jm.payment: DEBUG
     org.springframework.kafka: DEBUG
 
 # Stripe
 stripe:
   secret-key: ${STRIPE_SECRET_KEY}
-  success-url: "http://localhost:8080/payment/success"
-  cancel-url: "http://localhost:8080/payment/cancel"
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:8082/payment/success}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:8082/payment/cancel}
 
 REDIS_HOST: localhost
 REDIS_PORT: 6379

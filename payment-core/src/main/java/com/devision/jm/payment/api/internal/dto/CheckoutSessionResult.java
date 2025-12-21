@@ -2,6 +2,7 @@ package com.devision.jm.payment.api.internal.dto;
 
 import java.util.UUID;
 
+//result for business flow
 public class CheckoutSessionResult {
     private final String checkoutUrl;
     private final String sessionId;

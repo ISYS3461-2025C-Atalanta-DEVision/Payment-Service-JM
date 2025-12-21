@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.MongoTransactionManager;
+import org.springframework.data.mongodb.config.EnableMongoAuditing;
 
 
 /**
@@ -17,7 +18,8 @@ import org.springframework.data.mongodb.MongoTransactionManager;
  */
 @Slf4j
 @Configuration
-public class MongoConfig {
+@EnableMongoAuditing
+public class MongoConfig {  
 
     /**
      * MongoDB Transaction Manager
@@ -29,7 +31,7 @@ public class MongoConfig {
      * are still atomic at the document level.
      */
     @Bean
-    MongoTransactionManager transactionManager(MongoDatabaseFactory dbFactory) {
+    public MongoTransactionManager transactionManager(MongoDatabaseFactory dbFactory) {
         log.info("Configuring MongoDB Transaction Manager for ACID transactions (A.3.5)");
         return new MongoTransactionManager(dbFactory);
     }

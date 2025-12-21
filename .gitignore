@@ -33,7 +33,7 @@ Thumbs.db
 
 # Environment files
 .env
-*.env
+.env.*
 
 # Claude
 .claude/
