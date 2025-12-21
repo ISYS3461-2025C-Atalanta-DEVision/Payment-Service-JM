@@ -17,7 +17,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection = "subscriptions")
 public class Subscription extends BaseEntity {
 
-
     private UUID applicantId;
     private UUID companyId;
 
@@ -34,4 +33,49 @@ public class Subscription extends BaseEntity {
 
     // Mongo id is String, so store lastTransactionId as String (ObjectId string)
     private String lastTransactionId;
+
+    public UUID getApplicantId() {
+        return applicantId;
+    }
+
+    public UUID getCompanyId() {
+        return companyId;
+    }
+
+    public String getPayerEmail() {
+        return payerEmail;
+    }
+
+    public String getPlanType() {
+        return planType;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public SubscriptionStatus getStatus() {
+        return status;
+    }
+
+    public LocalDate getLastRenewedDate() {
+        return lastRenewedDate;
+    }
+
+    public String getLastTransactionId() {
+        return lastTransactionId;
+    }
+
+    public void setLastTransactionId(String lastTransactionId) {
+        this.lastTransactionId = lastTransactionId;
+    }
+
 }

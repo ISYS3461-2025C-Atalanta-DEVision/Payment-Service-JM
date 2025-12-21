@@ -4,11 +4,12 @@ import java.util.UUID;
 
 //result for business flow
 public class CheckoutSessionResult {
+
     private final String checkoutUrl;
     private final String sessionId;
-    private final UUID transactionId;
+    private final String transactionId;
 
-    public CheckoutSessionResult(String checkoutUrl, String sessionId, UUID transactionId) {
+    public CheckoutSessionResult(String checkoutUrl, String sessionId, String transactionId) {
         this.checkoutUrl = checkoutUrl;
         this.sessionId = sessionId;
         this.transactionId = transactionId;
@@ -22,7 +23,8 @@ public class CheckoutSessionResult {
         return sessionId;
     }
 
-    public UUID getTransactionId() {
+    public String getTransactionId() {
         return transactionId;
     }
+
 }

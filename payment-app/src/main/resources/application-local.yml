@@ -32,19 +32,6 @@ spring:
     host: localhost
     port: 1025
 
-  # OAuth2 Configuration
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID:your-client-id}
-            client-secret: ${GOOGLE_CLIENT_SECRET:your-client-secret}
-            scope:
-              - email
-              - profile
-              - openid
-            redirect-uri: "http://localhost:8081/login/oauth2/code/google"
 
 # Disable Eureka for local
 eureka:
@@ -79,12 +66,10 @@ logging:
 # Stripe
 stripe:
   secret-key: ${STRIPE_SECRET_KEY}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET}
   success-url: ${STRIPE_SUCCESS_URL:http://localhost:8082/payment/success}
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:8082/payment/cancel}
 
-REDIS_HOST: localhost
-REDIS_PORT: 6379
-REDIS_PASSWORD: ""
 
-JWT_SECRET: local-dev-secret-key-must-be-at-least-32-characters-long
-INTERNAL_API_KEY: local-dev-api-key
+  
+

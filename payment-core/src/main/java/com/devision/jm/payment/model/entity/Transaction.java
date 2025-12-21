@@ -25,4 +25,61 @@ public class Transaction extends BaseEntity {
     private String stripePaymentId;
 
     private TransactionStatus status;
+
+    public String getSubscriptionId() {
+        return subscriptionId;
+    }
+
+    public Long getAmount() {
+        return amount;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public String getPayerEmail() {
+        return payerEmail;
+    }
+
+    public String getStripeCheckoutSessionId() {
+        return stripeCheckoutSessionId;
+    }
+
+    public String getStripePaymentId() {
+        return stripePaymentId;
+    }
+
+    public TransactionStatus getStatus() {
+        return status;
+    }
+
+    public void setStripeCheckoutSessionId(String stripeCheckoutSessionId) {
+        this.stripeCheckoutSessionId = stripeCheckoutSessionId;
+    }
+
+    public void setSubscriptionId(String subscriptionId) {
+        this.subscriptionId = subscriptionId;
+    }
+
+    public void setAmount(Long amount) {
+        this.amount = amount;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public void setPayerEmail(String payerEmail) {
+        this.payerEmail = payerEmail;
+    }
+
+    public void setStripePaymentId(String stripePaymentId) {
+        this.stripePaymentId = stripePaymentId;
+    }
+
+    public void setStatus(TransactionStatus status) {
+        this.status = status;
+    }
+
 }
