@@ -6,7 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
 
-
+/*POST /api/payments/checkout
+Called by your FE */
 
 @RestController
 @RequestMapping("/api/payments")

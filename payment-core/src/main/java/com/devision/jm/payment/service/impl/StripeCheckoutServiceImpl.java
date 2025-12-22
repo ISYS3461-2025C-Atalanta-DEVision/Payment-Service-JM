@@ -51,7 +51,7 @@ public class StripeCheckoutServiceImpl implements CheckoutService {
         try {
             SessionCreateParams params
                     = SessionCreateParams.builder()
-                            .setMode(SessionCreateParams.Mode.PAYMENT)
+                            .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
                             .setSuccessUrl(successUrl)
                             .setCancelUrl(cancelUrl)
                             .setCustomerEmail(command.getPayerEmail())
@@ -62,6 +62,11 @@ public class StripeCheckoutServiceImpl implements CheckoutService {
                                                     SessionCreateParams.LineItem.PriceData.builder()
                                                             .setCurrency(command.getCurrency().toLowerCase())
                                                             .setUnitAmount(unitAmount)
+                                                            .setRecurring(
+                                                                    SessionCreateParams.LineItem.PriceData.Recurring.builder()
+                                                                            .setInterval(SessionCreateParams.LineItem.PriceData.Recurring.Interval.MONTH)
+                                                                            .build()
+                                                            )
                                                             .setProductData(
                                                                     SessionCreateParams.LineItem.PriceData.ProductData.builder()
                                                                             .setName("PREMIUM Subscription")
@@ -116,7 +121,7 @@ public class StripeCheckoutServiceImpl implements CheckoutService {
     private long amountForPlan(String planType, String currency) {
         String c = currency.trim().toLowerCase();
         boolean isVnd = c.equals("vnd");
-        return isVnd ? 199000L : 1999L;
+        return isVnd ? 300000L : 3000L;
     }
 
 }

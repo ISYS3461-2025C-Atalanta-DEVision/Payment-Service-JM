@@ -12,9 +12,12 @@ import org.springframework.stereotype.Service;
 public class PaymentExternalApiImpl implements PaymentExternalApi {
 
     private final CheckoutService checkoutService;
+    private final StripeWebhookHandler stripeWebhookHandler;
 
-    public PaymentExternalApiImpl(CheckoutService checkoutService) {
+    public PaymentExternalApiImpl(CheckoutService checkoutService, StripeWebhookHandler stripeWebhookHandler) {
         this.checkoutService = checkoutService;
+        this.stripeWebhookHandler = stripeWebhookHandler;
+
     }
 
     @Override
@@ -30,5 +33,9 @@ public class PaymentExternalApiImpl implements PaymentExternalApi {
         CheckoutSessionResult result = checkoutService.checkout(cmd);
 
         return new StripeResponse(result.getCheckoutUrl(), result.getSessionId());
+    }
+    @Override
+    public String handleStripeWebhook(String payload, String stripeSignature) {
+        return stripeWebhookHandler.handleWebhook(payload, stripeSignature);
     }
 }
