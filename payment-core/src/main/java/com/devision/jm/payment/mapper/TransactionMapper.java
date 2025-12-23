@@ -9,8 +9,10 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TransactionMapper {
 
-  @Mapping(target = "transactionId", source = "id")
-  @Mapping(target = "status", expression = "java(entity.getStatus() == null ? null : entity.getStatus().name())")
-  @Mapping(target = "stripePaymentId", source = "stripePaymentId")
-  TransactionResponse toResponse(Transaction entity);
+    @Mapping(target = "transactionId", source = "id")
+    @Mapping(target = "status", expression = "java(entity.getStatus() == null ? null : entity.getStatus().name())")
+    @Mapping(target = "amount", expression = "java(entity.getAmount() == null ? null : String.valueOf(entity.getAmount()))")
+    @Mapping(target = "stripePaymentId", source = "stripePaymentId")
+    @Mapping(target = "createdAt", expression = "java(entity.getCreatedAt() == null ? null : entity.getCreatedAt().toString())")
+    TransactionResponse toResponse(Transaction entity);
 }

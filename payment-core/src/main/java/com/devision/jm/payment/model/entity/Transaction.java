@@ -1,15 +1,9 @@
 package com.devision.jm.payment.model.entity;
 
 import com.devision.jm.payment.model.enums.TransactionStatus;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Getter
-@Setter
-@SuperBuilder
-@NoArgsConstructor
-@AllArgsConstructor
+
 @Document(collection = "transactions")
 public class Transaction extends BaseEntity {
 

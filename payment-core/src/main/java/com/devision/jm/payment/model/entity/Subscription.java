@@ -1,19 +1,13 @@
 package com.devision.jm.payment.model.entity;
 
 import com.devision.jm.payment.model.enums.SubscriptionStatus;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.util.UUID;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Getter
-@Setter
-@SuperBuilder
-@NoArgsConstructor
-@AllArgsConstructor
+
 @Document(collection = "subscriptions")
 public class Subscription extends BaseEntity {
 

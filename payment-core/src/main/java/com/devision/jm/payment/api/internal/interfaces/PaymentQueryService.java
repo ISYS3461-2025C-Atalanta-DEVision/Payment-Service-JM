@@ -1,17 +1,13 @@
-package com.devision.jm.payment.api.external.interfaces;
+package com.devision.jm.payment.api.internal.interfaces;
 
-import com.devision.jm.payment.api.external.dto.SubscriptionIntentResponse;
-import com.devision.jm.payment.api.external.dto.SubscriptionRequest;
 import com.devision.jm.payment.api.external.dto.SubscriptionResponse;
 import com.devision.jm.payment.api.external.dto.TransactionResponse;
+import com.devision.jm.payment.api.external.interfaces.PremiumStatusResponse;
 
 import java.util.List;
 import java.util.UUID;
 
-public interface PaymentExternalApi {
-
-    SubscriptionIntentResponse createSubscriptionIntent(SubscriptionRequest request);
-
+public interface PaymentQueryService {
     TransactionResponse getTransactionById(String transactionId);
 
     List<TransactionResponse> findTransactions(String payerEmail, UUID companyId, UUID applicantId, String status);
@@ -24,7 +20,4 @@ public interface PaymentExternalApi {
 
     SubscriptionResponse cancelCompanySubscription(UUID companyId, boolean cancelAtPeriodEnd);
 
-    void handleStripeWebhook(String payload, String stripeSignature);
-
-    ExpirationCheckResponse runExpirationCheckNow();
 }
