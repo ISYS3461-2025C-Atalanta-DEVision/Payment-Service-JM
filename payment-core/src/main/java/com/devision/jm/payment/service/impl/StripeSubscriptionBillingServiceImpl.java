@@ -3,8 +3,10 @@ package com.devision.jm.payment.service.impl;
 import com.devision.jm.payment.api.internal.dto.CreateSubscriptionCommand;
 import com.devision.jm.payment.api.internal.dto.CreateSubscriptionResult;
 import com.devision.jm.payment.api.internal.interfaces.SubscriptionBillingService;
+import com.devision.jm.payment.model.enums.SubscriptionStatus;
 import com.devision.jm.payment.model.entity.Transaction;
 import com.devision.jm.payment.model.enums.TransactionStatus;
+import com.devision.jm.payment.repository.SubscriptionRepository;
 import com.devision.jm.payment.repository.TransactionRepository;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
@@ -17,13 +19,14 @@ import com.stripe.param.SubscriptionCreateParams;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+
 @Service
 public class StripeSubscriptionBillingServiceImpl implements SubscriptionBillingService {
 
     @Value("${stripe.secret-key}")
     private String secretKey;
 
-    // Set 2 priceId này trong application-local.yml / env
     @Value("${stripe.price-id.usd:}")
     private String priceIdUsd;
 
@@ -31,9 +34,14 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     private String priceIdVnd;
 
     private final TransactionRepository transactionRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
-    public StripeSubscriptionBillingServiceImpl(TransactionRepository transactionRepository) {
+    public StripeSubscriptionBillingServiceImpl(
+            TransactionRepository transactionRepository,
+            SubscriptionRepository subscriptionRepository
+    ) {
         this.transactionRepository = transactionRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     @Override
@@ -60,10 +68,10 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
                             .build()
             );
 
-            // 3) chọn priceId theo currency (price đã tạo sẵn trong Stripe Dashboard)
+            // 3) chọn priceId theo currency
             String priceId = resolvePriceId(command.getCurrency());
 
-            // 4) tạo Subscription (default_incomplete) + expand PI
+            // 4) tạo Stripe Subscription (default_incomplete) + expand PI
             SubscriptionCreateParams params = SubscriptionCreateParams.builder()
                     .setCustomer(customer.getId())
                     .setPaymentBehavior(SubscriptionCreateParams.PaymentBehavior.DEFAULT_INCOMPLETE)
@@ -79,12 +87,12 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
                     .putMetadata("applicantId", command.getApplicantId() == null ? "" : command.getApplicantId().toString())
                     .build();
 
-            Subscription subscription = Subscription.create(params);
+            Subscription stripeSub = Subscription.create(params);
 
             // 5) lấy PaymentIntent từ latest_invoice.payment_intent
-            Invoice latestInvoice = subscription.getLatestInvoiceObject();
-            if (latestInvoice == null && subscription.getLatestInvoice() != null) {
-                latestInvoice = Invoice.retrieve(subscription.getLatestInvoice());
+            Invoice latestInvoice = stripeSub.getLatestInvoiceObject();
+            if (latestInvoice == null && stripeSub.getLatestInvoice() != null) {
+                latestInvoice = Invoice.retrieve(stripeSub.getLatestInvoice());
             }
             if (latestInvoice == null) {
                 throw new RuntimeException("Stripe subscription has no latest_invoice");
@@ -99,13 +107,37 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
             }
 
             String clientSecret = pi.getClientSecret();
-            String stripeSubscriptionId = subscription.getId();
+            String stripeSubscriptionId = stripeSub.getId();
             String stripePaymentIntentId = pi.getId();
 
             // 6) update transaction mapping
+            // NOTE: bạn đang dùng field "subscriptionId" để chứa stripeSubscriptionId (ok, miễn consistent)
             tx.setSubscriptionId(stripeSubscriptionId);
             tx.setStripePaymentId(stripePaymentIntentId);
             tx = transactionRepository.save(tx);
+
+            // 7) tạo Subscription entity trong DB của mình để webhook tìm thấy mà update ACTIVE
+            com.devision.jm.payment.model.entity.Subscription subEntity
+                    = new com.devision.jm.payment.model.entity.Subscription();
+
+            subEntity.setCompanyId(command.getCompanyId());
+            subEntity.setApplicantId(command.getApplicantId());
+            subEntity.setPayerEmail(command.getPayerEmail());
+            subEntity.setPlanType(command.getPlanType());
+            subEntity.setCurrency(command.getCurrency());
+
+            // lúc này chưa paid => coi như chưa active
+            // enum bạn chỉ có ACTIVE/EXPIRED nên mình set EXPIRED (pending) tạm.
+            subEntity.setStatus(SubscriptionStatus.EXPIRED);
+
+            subEntity.setStripeSubscriptionId(stripeSubscriptionId);
+            subEntity.setLastTransactionId(tx.getId());
+
+            // có thể để null, webhook invoice.paid sẽ set chuẩn theo Stripe period
+            subEntity.setStartDate(LocalDate.now());
+            subEntity.setEndDate(LocalDate.now()); // tạm, webhook sẽ overwrite
+
+            subscriptionRepository.save(subEntity);
 
             return new CreateSubscriptionResult(
                     clientSecret,
@@ -129,7 +161,6 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
             return priceIdVnd;
         }
 
-        // default USD
         if (priceIdUsd == null || priceIdUsd.isBlank()) {
             throw new IllegalArgumentException("Missing stripe.price-id.usd in config");
         }
@@ -160,6 +191,6 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     private long amountForPlan(String planType, String currency) {
         String c = currency.trim().toLowerCase();
         boolean isVnd = c.equals("vnd");
-        return isVnd ? 300000L : 3000L; // 30.00 USD -> 3000 cents
+        return isVnd ? 300000L : 3000L;
     }
 }
