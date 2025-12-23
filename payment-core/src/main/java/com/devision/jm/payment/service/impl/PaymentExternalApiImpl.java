@@ -4,7 +4,7 @@ import com.devision.jm.payment.api.external.dto.SubscriptionIntentResponse;
 import com.devision.jm.payment.api.external.dto.SubscriptionRequest;
 import com.devision.jm.payment.api.external.dto.SubscriptionResponse;
 import com.devision.jm.payment.api.external.dto.TransactionResponse;
-import com.devision.jm.payment.api.external.interfaces.ExpirationCheckResponse;
+import com.devision.jm.payment.api.external.dto.ExpirationCheckResponse;
 import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
 import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
 import com.devision.jm.payment.api.internal.dto.CreateSubscriptionCommand;
