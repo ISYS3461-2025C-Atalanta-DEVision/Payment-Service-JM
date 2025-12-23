@@ -1,15 +1,16 @@
 package com.devision.jm.payment.api.internal.dto;
+
 import java.util.UUID;
 
-//what payment service decides to process
-public class CheckoutCommand {
+public class CreateSubscriptionCommand {
+
     private UUID companyId;
     private UUID applicantId;
     private String payerEmail;
     private String planType;
     private String currency;
 
-    public CheckoutCommand(UUID companyId, UUID applicantId, String payerEmail, String planType, String currency) {
+    public CreateSubscriptionCommand(UUID companyId, UUID applicantId, String payerEmail, String planType, String currency) {
         this.companyId = companyId;
         this.applicantId = applicantId;
         this.payerEmail = payerEmail;
@@ -18,7 +19,7 @@ public class CheckoutCommand {
     }
 
     public UUID getCompanyId() {
-        return companyId;  
+        return companyId;
     }
 
     public UUID getApplicantId() {

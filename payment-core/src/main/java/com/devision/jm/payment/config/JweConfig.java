@@ -3,6 +3,9 @@ package com.devision.jm.payment.config;
 import io.jsonwebtoken.security.Keys;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,6 +14,8 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+
+
 
 /**
  * JWE Configuration
@@ -44,6 +49,8 @@ public class JweConfig {
     @Value("${jwe.issuer:devision-jm-auth}")
     private String issuer;
 
+    private static final Logger logger = LoggerFactory.getLogger(JweConfig.class);
+
     /**
      * Get the signing key for JWS (token signing)
      * Used for verifying token integrity
@@ -69,7 +76,7 @@ public class JweConfig {
             byte[] keyBytes = digest.digest(keySource.getBytes(StandardCharsets.UTF_8));
             return new SecretKeySpec(keyBytes, "AES");
         } catch (NoSuchAlgorithmException e) {
-            log.error("Failed to generate encryption key: {}", e.getMessage());
+            logger.error("Failed to generate encryption key: {}", e.getMessage());
             throw new RuntimeException("Failed to generate encryption key", e);
         }
     }

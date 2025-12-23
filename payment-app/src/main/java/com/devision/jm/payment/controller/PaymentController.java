@@ -1,26 +1,26 @@
 package com.devision.jm.payment.controller;
 
-import com.devision.jm.payment.api.external.dto.StripeResponse;
 import com.devision.jm.payment.api.external.dto.SubscriptionRequest;
+import com.devision.jm.payment.api.external.dto.SubscriptionIntentResponse;
+import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
-
-/*POST /api/payments/checkout
-Called by your FE */
 
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
 
-  private final PaymentExternalApi paymentExternalApi;
+    private final PaymentExternalApi paymentExternalApi;
 
-  public PaymentController(PaymentExternalApi paymentExternalApi) {
-    this.paymentExternalApi = paymentExternalApi;
-  }
+    public PaymentController(PaymentExternalApi paymentExternalApi) {
+        this.paymentExternalApi = paymentExternalApi;
+    }
 
-  @PostMapping("/checkout")
-  public ResponseEntity<StripeResponse> checkout(@RequestBody SubscriptionRequest request) {
-    return ResponseEntity.ok(paymentExternalApi.checkout(request));
-  }
+    // Option B: FE gọi để lấy client_secret (Stripe Elements)
+    @PostMapping("/subscription/intent")
+    public ResponseEntity<SubscriptionIntentResponse> createSubscriptionIntent(@RequestBody SubscriptionRequest request) {
+        return ResponseEntity.ok(paymentExternalApi.createSubscriptionIntent(request));
+    }
+
+   
 }

@@ -1,75 +1,46 @@
-# Auth Service - Local Development Configuration
-# Activate with: --spring.profiles.active=local
-
 server:
   port: 8080
 
 spring:
-  # Remove Kafka exclusion for local development
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
 
-  # MongoDB Configuration
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/payment_db}
-      
+      uri: ${MONGODB_URI}
 
-  # Redis Configuration
-  #redis:
-  #host: localhost
-  #port: 6379
-  #password: ""
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000ms
 
-  # Kafka Configuration (A.3.2)
   kafka:
     bootstrap-servers: localhost:9092
 
-  # Mail Configuration (disable for local)
   mail:
     host: localhost
     port: 1025
 
-
-# Disable Eureka for local
 eureka:
   client:
     enabled: false
 
-# Internal API Key
 internal:
   api-key: local-dev-api-key
   api-key-validation:
     enabled: false
 
-# JWE Configuration
 jwe:
-  secret: local-dev-secret-key-must-be-at-least-32-characters-long
+  secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-characters-long}
   access-token-expiration: 900000
   refresh-token-expiration: 604800000
   issuer: devision-jm-payment-service
 
-# Application Configuration
-app:
-  name: JobMatch
-  frontend-url: http://localhost:3000
-  from-email: noreply@jobmatch.local
-
-# Logging
-logging:
-  level:
-    com.devision.jm.payment: DEBUG
-    org.springframework.kafka: DEBUG
-
-# Stripe
 stripe:
   secret-key: ${STRIPE_SECRET_KEY}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET}
-  success-url: ${STRIPE_SUCCESS_URL:http://localhost:8082/payment/success}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:8082/payment/success?session_id={CHECKOUT_SESSION_ID}}
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:8082/payment/cancel}
-
-
-  
-

@@ -61,9 +61,10 @@ public class SecurityConfig {
                         // // .requestMatchers("/api/payments/checkout").permitAll()
 
                         // .anyRequest().authenticated()
-                        .requestMatchers("/", "/actuator/").permitAll()
-                        .requestMatchers("/api/payments/webhook/").permitAll()
+                        .requestMatchers("/", "/actuator/**").permitAll()
+                        .requestMatchers("/api/payments/webhook/**").permitAll()
                         .requestMatchers("/api/payments/checkout").permitAll()
+                        .requestMatchers("/api/payments/subscription/intent").permitAll()
                         .anyRequest().authenticated()
                 )
 

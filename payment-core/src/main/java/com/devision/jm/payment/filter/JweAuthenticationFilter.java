@@ -1,6 +1,7 @@
 package com.devision.jm.payment.filter;
 
 import com.devision.jm.payment.config.JweConfig;
+import com.devision.jm.payment.config.MongoConfig;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.crypto.DirectDecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
@@ -11,6 +12,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -46,6 +50,8 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
 
     private final JweConfig jweConfig;
     private final RedisTemplate<String, String> redisTemplate;
+    private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
+
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -61,7 +67,7 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
                 if (claims != null) {
                     // Check if token is revoked in Redis (2.3.2)
                     if (isTokenRevoked(jwe)) {
-                        log.warn("Attempted use of revoked token");
+                        logger.warn("Attempted use of revoked token");
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         response.setContentType("application/json");
                         response.getWriter().write("{\"error\": \"Token has been revoked\"}");
@@ -70,7 +76,7 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
 
                     // Check if token is expired
                     if (claims.getExpirationTime() != null && claims.getExpirationTime().before(new Date())) {
-                        log.warn("JWE token has expired");
+                        logger.warn("JWE token has expired");
                         response.setHeader("X-Token-Expired", "true");
                         filterChain.doFilter(request, response);
                         return;
@@ -101,7 +107,7 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            log.debug("Cannot set user authentication: {}", e.getMessage());
+            logger.debug("Cannot set user authentication: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
@@ -135,10 +141,10 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
             return encryptedJWT.getJWTClaimsSet();
 
         } catch (ParseException e) {
-            log.debug("Invalid JWE token format: {}", e.getMessage());
+            logger.debug("Invalid JWE token format: {}", e.getMessage());
             return null;
         } catch (JOSEException e) {
-            log.debug("Failed to decrypt JWE token: {}", e.getMessage());
+            logger.debug("Failed to decrypt JWE token: {}", e.getMessage());
             return null;
         }
     }
@@ -153,7 +159,7 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             // Fail-open for availability (allow request to proceed)
             // Log error but don't block the request
-            log.error("Redis unavailable for token revocation check: {}", e.getMessage());
+            logger.error("Redis unavailable for token revocation check: {}", e.getMessage());
             return false;
         }
     }

@@ -1,11 +1,15 @@
 package com.devision.jm.payment.filter;
 
+import com.devision.jm.payment.config.MongoConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -33,6 +37,8 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
     public static final String INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key";
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
+
 
     // Endpoints that can be accessed without internal API key (for health checks, OAuth2, etc.)
     private static final List<String> ALLOWED_WITHOUT_KEY = List.of(
@@ -63,7 +69,7 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
 
         // Skip validation if disabled (for local development)
         if (!validationEnabled) {
-            log.debug("Internal API key validation disabled, allowing request to: {}", path);
+            logger.debug("Internal API key validation disabled, allowing request to: {}", path);
             filterChain.doFilter(request, response);
             return;
         }
@@ -79,13 +85,13 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
         }
 
         if (!expectedApiKey.equals(providedApiKey)) {
-            log.warn("Invalid internal API key for request to: {} from IP: {}",
+            logger.warn("Invalid internal API key for request to: {} from IP: {}",
                     path, request.getRemoteAddr());
             sendForbiddenResponse(response, "Invalid internal API key");
             return;
         }
 
-        log.debug("Valid internal API key for request to: {}", path);
+        logger.debug("Valid internal API key for request to: {}", path);
         filterChain.doFilter(request, response);
     }
 
