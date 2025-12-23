@@ -78,7 +78,7 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
         String providedApiKey = request.getHeader(INTERNAL_API_KEY_HEADER);
 
         if (providedApiKey == null || providedApiKey.isBlank()) {
-            log.warn("Missing internal API key header for request to: {} from IP: {}",
+            logger.warn("Missing internal API key header for request to: {} from IP: {}",
                     path, request.getRemoteAddr());
             sendForbiddenResponse(response, "Missing internal API key");
             return;

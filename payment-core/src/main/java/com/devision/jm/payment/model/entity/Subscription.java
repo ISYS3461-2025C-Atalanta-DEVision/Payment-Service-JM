@@ -28,6 +28,9 @@ public class Subscription extends BaseEntity {
     // Mongo id is String, so store lastTransactionId as String (ObjectId string)
     private String lastTransactionId;
 
+    private String stripeSubscriptionId;
+
+
     public UUID getApplicantId() {
         return applicantId;
     }
@@ -71,5 +74,50 @@ public class Subscription extends BaseEntity {
     public void setLastTransactionId(String lastTransactionId) {
         this.lastTransactionId = lastTransactionId;
     }
+
+    public String getStripeSubscriptionId() {
+        return stripeSubscriptionId;
+    }
+
+    public void setStripeSubscriptionId(String stripeSubscriptionId) {
+        this.stripeSubscriptionId = stripeSubscriptionId;
+    }
+
+    public void setApplicantId(UUID applicantId) {
+        this.applicantId = applicantId;
+    }
+
+    public void setCompanyId(UUID companyId) {
+        this.companyId = companyId;
+    }
+
+    public void setPayerEmail(String payerEmail) {
+        this.payerEmail = payerEmail;
+    }
+
+    public void setPlanType(String planType) {
+        this.planType = planType;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public void setStatus(SubscriptionStatus status) {
+        this.status = status;
+    }
+
+    public void setLastRenewedDate(LocalDate lastRenewedDate) {
+        this.lastRenewedDate = lastRenewedDate;
+    }
+
 
 }
