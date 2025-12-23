@@ -4,6 +4,7 @@ import com.devision.jm.payment.api.external.dto.SubscriptionIntentResponse;
 import com.devision.jm.payment.api.external.dto.SubscriptionRequest;
 import com.devision.jm.payment.api.external.dto.SubscriptionResponse;
 import com.devision.jm.payment.api.external.dto.TransactionResponse;
+import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
 
 import java.util.List;
 import java.util.UUID;

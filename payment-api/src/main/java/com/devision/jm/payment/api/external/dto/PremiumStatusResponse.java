@@ -1,4 +1,4 @@
-package com.devision.jm.payment.api.external.interfaces;
+package com.devision.jm.payment.api.external.dto;
 
 import java.util.UUID;
 

@@ -8,7 +8,7 @@ public class SubscriptionRequest {
     private UUID companyId;
     private UUID applicantId;
     private String payerEmail;
-    private String planType;      // BASIC / PREMIUM
+    private String planType;      // PREMIUM
     private String currency;
 
     public SubscriptionRequest() {

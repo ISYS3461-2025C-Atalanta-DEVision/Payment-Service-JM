@@ -6,7 +6,7 @@ import com.devision.jm.payment.api.external.dto.SubscriptionResponse;
 import com.devision.jm.payment.api.external.dto.TransactionResponse;
 import com.devision.jm.payment.api.external.interfaces.ExpirationCheckResponse;
 import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
-import com.devision.jm.payment.api.external.interfaces.PremiumStatusResponse;
+import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
