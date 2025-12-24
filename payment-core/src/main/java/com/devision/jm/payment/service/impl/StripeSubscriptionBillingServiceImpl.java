@@ -127,8 +127,7 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
             subEntity.setCurrency(command.getCurrency());
 
             // lúc này chưa paid => coi như chưa active
-            // enum bạn chỉ có ACTIVE/EXPIRED nên mình set EXPIRED (pending) tạm.
-            subEntity.setStatus(SubscriptionStatus.EXPIRED);
+            subEntity.setStatus(SubscriptionStatus.PENDING);
 
             subEntity.setStripeSubscriptionId(stripeSubscriptionId);
             subEntity.setLastTransactionId(tx.getId());
