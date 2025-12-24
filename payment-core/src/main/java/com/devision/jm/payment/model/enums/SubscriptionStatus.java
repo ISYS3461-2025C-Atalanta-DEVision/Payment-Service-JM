@@ -3,5 +3,7 @@ package com.devision.jm.payment.model.enums;
 public enum SubscriptionStatus {
     ACTIVE,
     PENDING,
-    EXPIRED
+    EXPIRED,
+    CANCELLING,
+    CANCELLED
 }
