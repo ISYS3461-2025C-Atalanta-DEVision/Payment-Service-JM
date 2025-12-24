@@ -1,53 +1,91 @@
 package com.devision.jm.payment.controller;
 
-import com.devision.jm.payment.api.external.dto.PaymentSuccessRequest;
-import com.devision.jm.payment.api.external.dto.StripeResponse;
+import com.devision.jm.payment.api.external.dto.SubscriptionIntentResponse;
 import com.devision.jm.payment.api.external.dto.SubscriptionRequest;
+import com.devision.jm.payment.api.external.dto.SubscriptionResponse;
+import com.devision.jm.payment.api.external.dto.TransactionResponse;
+import com.devision.jm.payment.api.external.dto.ExpirationCheckResponse;
 import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
-import lombok.extern.slf4j.Slf4j;
+import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Payment Controller
- *
- * REST endpoints for payment operations.
- * Uses only external interfaces from payment-api module.
- * Internal DTOs and Kafka logic are encapsulated in payment-core.
- */
-@Slf4j
+import java.util.List;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
 
-  private final PaymentExternalApi paymentExternalApi;
+    private final PaymentExternalApi paymentExternalApi;
 
-  public PaymentController(PaymentExternalApi paymentExternalApi) {
-    this.paymentExternalApi = paymentExternalApi;
-  }
+    public PaymentController(PaymentExternalApi paymentExternalApi) {
+        this.paymentExternalApi = paymentExternalApi;
+    }
 
-  @PostMapping("/checkout")
-  public ResponseEntity<StripeResponse> checkout(@RequestBody SubscriptionRequest request) {
-    return ResponseEntity.ok(paymentExternalApi.checkout(request));
-  }
+    // 1) Create subscription intent -> trả clientSecret
+    @PostMapping("/subscriptions/intent")
+    public ResponseEntity<SubscriptionIntentResponse> createSubscriptionIntent(@RequestBody SubscriptionRequest request) {
+        return ResponseEntity.ok(paymentExternalApi.createSubscriptionIntent(request));
+    }
 
-  /**
-   * Payment Success Endpoint
-   *
-   * Simulates a successful payment and publishes a Kafka event
-   * to notify Profile Service to upgrade the user to PREMIUM.
-   *
-   * POST /api/payments/success
-   * Body: { "userId": "...", "planType": "PREMIUM" }
-   */
-  @PostMapping("/success")
-  public ResponseEntity<String> paymentSuccess(@RequestBody PaymentSuccessRequest request) {
-    log.info("Received payment success request for userId: {}, planType: {}",
-            request.getUserId(), request.getPlanType());
+    // 2) Get transaction by id
+    @GetMapping("/transactions/{transactionId}")
+    public ResponseEntity<TransactionResponse> getTransaction(@PathVariable String transactionId) {
+        return ResponseEntity.ok(paymentExternalApi.getTransactionById(transactionId));
+    }
 
-    // Delegate to service layer (internal DTOs handled in payment-core)
-    String result = paymentExternalApi.processPaymentSuccess(request);
+    // 3) Search transactions (optional but useful)
+    @GetMapping("/transactions")
+    public ResponseEntity<List<TransactionResponse>> findTransactions(
+            @RequestParam(required = false) String payerEmail,
+            @RequestParam(required = false) UUID companyId,
+            @RequestParam(required = false) UUID applicantId,
+            @RequestParam(required = false) String status
+    ) {
+        return ResponseEntity.ok(paymentExternalApi.findTransactions(payerEmail, companyId, applicantId, status));
+    }
 
-    return ResponseEntity.ok(result);
-  }
+    // 4) Get subscription by internal id (UUID string)
+    @GetMapping("/subscriptions/{subscriptionId}")
+    public ResponseEntity<SubscriptionResponse> getSubscription(@PathVariable String subscriptionId) {
+        return ResponseEntity.ok(paymentExternalApi.getSubscriptionById(subscriptionId));
+    }
+
+    // 5) Get subscription by Stripe id
+    @GetMapping("/subscriptions/stripe/{stripeSubscriptionId}")
+    public ResponseEntity<SubscriptionResponse> getSubscriptionByStripeId(@PathVariable String stripeSubscriptionId) {
+        return ResponseEntity.ok(paymentExternalApi.getSubscriptionByStripeId(stripeSubscriptionId));
+    }
+
+    // 6) Premium status for company profile page
+    @GetMapping("/premium/company/{companyId}")
+    public ResponseEntity<PremiumStatusResponse> getCompanyPremiumStatus(@PathVariable UUID companyId) {
+        return ResponseEntity.ok(paymentExternalApi.getCompanyPremiumStatus(companyId));
+    }
+
+    // 7) Cancel company subscription (optional)
+    @PostMapping("/subscriptions/company/{companyId}/cancel")
+    public ResponseEntity<SubscriptionResponse> cancelCompanySubscription(
+            @PathVariable UUID companyId,
+            @RequestParam(defaultValue = "true") boolean cancelAtPeriodEnd
+    ) {
+        return ResponseEntity.ok(paymentExternalApi.cancelCompanySubscription(companyId, cancelAtPeriodEnd));
+    }
+
+    // 8) Stripe webhook
+    @PostMapping("/webhooks/stripe")
+    public ResponseEntity<String> stripeWebhook(
+            @RequestBody String payload,
+            @RequestHeader(name = "Stripe-Signature", required = false) String stripeSignature
+    ) {
+        paymentExternalApi.handleStripeWebhook(payload, stripeSignature);
+        return ResponseEntity.ok("ok");
+    }
+
+    // 9) Internal: manual trigger expiration check (for testing)
+    @PostMapping("/internal/subscriptions/run-expiration-check")
+    public ResponseEntity<ExpirationCheckResponse> runExpirationCheckNow() {
+        return ResponseEntity.ok(paymentExternalApi.runExpirationCheckNow());
+    }
 }
