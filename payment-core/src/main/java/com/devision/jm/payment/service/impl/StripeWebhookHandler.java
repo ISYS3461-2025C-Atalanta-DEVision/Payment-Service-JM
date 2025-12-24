@@ -14,11 +14,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
+import com.devision.jm.payment.api.internal.interfaces.StripeWebhookService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
-public class StripeWebhookHandler {
+public class StripeWebhookHandler implements StripeWebhookService {
 
     @Value("${stripe.webhook-secret}")
     private String endpointSecret;
@@ -31,6 +32,7 @@ public class StripeWebhookHandler {
         this.subscriptionRepository = subscriptionRepository;
     }
 
+    @Override
     public String handleWebhook(String payload, String stripeSignature) {
         Event event;
         try {
