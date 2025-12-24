@@ -1,5 +1,7 @@
 package com.devision.jm.payment.service.impl;
 
+import com.devision.jm.payment.api.internal.dto.PaymentCompletedEvent;
+import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
 import com.devision.jm.payment.model.enums.SubscriptionStatus;
 import com.devision.jm.payment.model.enums.TransactionStatus;
 import com.devision.jm.payment.repository.SubscriptionRepository;
@@ -12,12 +14,16 @@ import com.stripe.net.Webhook;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 import com.devision.jm.payment.api.internal.interfaces.StripeWebhookService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class StripeWebhookHandler implements StripeWebhookService {
 
@@ -26,10 +32,16 @@ public class StripeWebhookHandler implements StripeWebhookService {
 
     private final TransactionRepository transactionRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final KafkaProducerService kafkaProducerService;
 
-    public StripeWebhookHandler(TransactionRepository transactionRepository, SubscriptionRepository subscriptionRepository) {
+    @Autowired
+    public StripeWebhookHandler(
+            TransactionRepository transactionRepository,
+            SubscriptionRepository subscriptionRepository,
+            @Autowired(required = false) KafkaProducerService kafkaProducerService) {
         this.transactionRepository = transactionRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.kafkaProducerService = kafkaProducerService;
     }
 
     @Override
@@ -50,7 +62,7 @@ public class StripeWebhookHandler implements StripeWebhookService {
                 String stripeSubscriptionId = invoice.getSubscription();
                 String paymentIntentId = invoice.getPaymentIntent();
 
-                // update “latest” tx của subscription
+                // update "latest" tx của subscription
                 transactionRepository.findBySubscriptionIdOrderByCreatedAtDesc(stripeSubscriptionId)
                         .stream()
                         .findFirst()
@@ -60,7 +72,7 @@ public class StripeWebhookHandler implements StripeWebhookService {
                             transactionRepository.save(tx);
                         });
 
-                // 2) update subscription entity in DB
+                // 2) update subscription entity in DB and publish Kafka event
                 subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
                         .ifPresent(subEntity -> {
                             try {
@@ -85,8 +97,34 @@ public class StripeWebhookHandler implements StripeWebhookService {
 
                                 subscriptionRepository.save(subEntity);
 
+                                // 3) Publish Kafka event to notify Profile Service
+                                if (kafkaProducerService != null) {
+                                    String userId = subEntity.getCompanyId() != null
+                                            ? subEntity.getCompanyId().toString()
+                                            : (subEntity.getApplicantId() != null
+                                                    ? subEntity.getApplicantId().toString()
+                                                    : null);
+
+                                    if (userId != null) {
+                                        PaymentCompletedEvent kafkaEvent = PaymentCompletedEvent.builder()
+                                                .userId(userId)
+                                                .planType(subEntity.getPlanType())
+                                                .paidAt(LocalDateTime.now())
+                                                .build();
+
+                                        log.info("Publishing PaymentCompletedEvent for userId: {}, planType: {}",
+                                                userId, subEntity.getPlanType());
+                                        kafkaProducerService.publishPaymentCompletedEvent(kafkaEvent);
+                                    } else {
+                                        log.warn("Cannot publish Kafka event: no companyId or applicantId found for subscription {}",
+                                                stripeSubscriptionId);
+                                    }
+                                } else {
+                                    log.warn("KafkaProducerService not available, skipping Kafka event");
+                                }
+
                             } catch (Exception e) {
-                                // log nếu cần, nhưng đừng throw để Stripe không retry vô hạn
+                                log.error("Error processing invoice.paid webhook: {}", e.getMessage(), e);
                             }
                         });
             }
@@ -107,7 +145,7 @@ public class StripeWebhookHandler implements StripeWebhookService {
 
                 subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
                         .ifPresent(sub -> {
-                            sub.setStatus(SubscriptionStatus.EXPIRED); 
+                            sub.setStatus(SubscriptionStatus.EXPIRED);
                             subscriptionRepository.save(sub);
                         });
             }
