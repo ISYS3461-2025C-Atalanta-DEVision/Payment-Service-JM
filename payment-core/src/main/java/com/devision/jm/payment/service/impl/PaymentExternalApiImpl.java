@@ -1,105 +1,53 @@
 package com.devision.jm.payment.service.impl;
 
-import com.devision.jm.payment.api.external.dto.SubscriptionIntentResponse;
+import com.devision.jm.payment.api.external.dto.PaymentSuccessRequest;
+import com.devision.jm.payment.api.external.dto.StripeResponse;
 import com.devision.jm.payment.api.external.dto.SubscriptionRequest;
-import com.devision.jm.payment.api.external.dto.SubscriptionResponse;
-import com.devision.jm.payment.api.external.dto.TransactionResponse;
-import com.devision.jm.payment.api.external.dto.ExpirationCheckResponse;
 import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
-import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
-import com.devision.jm.payment.api.internal.dto.CreateSubscriptionCommand;
-import com.devision.jm.payment.api.internal.dto.CreateSubscriptionResult;
-import com.devision.jm.payment.api.internal.interfaces.SubscriptionBillingService;
+import com.devision.jm.payment.api.internal.dto.PaymentCompletedEvent;
+import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
+import com.devision.jm.payment.exception.PaymentException;
+import com.stripe.exception.StripeException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import com.devision.jm.payment.api.internal.interfaces.PaymentQueryService;
-import com.devision.jm.payment.api.internal.interfaces.ExpirationService;
-import com.devision.jm.payment.api.internal.interfaces.StripeWebhookService;
 
+import java.time.LocalDateTime;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-
+@Slf4j
 @Service
 public class PaymentExternalApiImpl implements PaymentExternalApi {
 
-    private final SubscriptionBillingService subscriptionBillingService;
-    private final PaymentQueryService paymentQueryService;
-    private final StripeWebhookService stripeWebhookService;
-    private final ExpirationService expirationService;
+  private final StripeService stripeService;
+  private final KafkaProducerService kafkaProducerService;
 
-    public PaymentExternalApiImpl(
-            SubscriptionBillingService subscriptionBillingService,
-            PaymentQueryService paymentQueryService,
-            StripeWebhookService stripeWebhookService,
-            ExpirationService expirationService
-    ) {
-        this.subscriptionBillingService = subscriptionBillingService;
-        this.paymentQueryService = paymentQueryService;
-        this.stripeWebhookService = stripeWebhookService;
-        this.expirationService = expirationService;
+  public PaymentExternalApiImpl(StripeService stripeService, KafkaProducerService kafkaProducerService) {
+    this.stripeService = stripeService;
+    this.kafkaProducerService = kafkaProducerService;
+  }
+
+  @Override
+  public StripeResponse checkout(SubscriptionRequest request) {
+    try {
+      return stripeService.checkoutPayment(request);
+    } catch (StripeException e) {
+      throw new PaymentException("Stripe checkout failed", e);
     }
+  }
 
-    @Override
-    public SubscriptionIntentResponse createSubscriptionIntent(SubscriptionRequest request) {
-        CreateSubscriptionCommand cmd = new CreateSubscriptionCommand(
-                request.getCompanyId(),
-                request.getApplicantId(),
-                request.getPayerEmail(),
-                request.getPlanType(),
-                request.getCurrency()
-        );
+  @Override
+  public String processPaymentSuccess(PaymentSuccessRequest request) {
+    log.info("Processing payment success for userId: {}, planType: {}",
+            request.getUserId(), request.getPlanType());
 
-        CreateSubscriptionResult result = subscriptionBillingService.createSubscriptionIntent(cmd);
+    // Create internal DTO and publish to Kafka
+    PaymentCompletedEvent event = PaymentCompletedEvent.builder()
+            .userId(request.getUserId())
+            .planType(request.getPlanType())
+            .paidAt(LocalDateTime.now())
+            .build();
 
-        return new SubscriptionIntentResponse(
-                result.getClientSecret(),
-                result.getStripeSubscriptionId(),
-                result.getStripePaymentIntentId(),
-                result.getTransactionId()
-        );
-    }
+    kafkaProducerService.publishPaymentCompletedEvent(event);
 
-    @Override
-    public TransactionResponse getTransactionById(String transactionId) {
-        return paymentQueryService.getTransactionById(transactionId);
-    }
-
-    @Override
-    public List<TransactionResponse> findTransactions(String payerEmail, UUID companyId, UUID applicantId, String status) {
-        if (paymentQueryService == null) {
-            return Collections.emptyList();
-        }
-        return paymentQueryService.findTransactions(payerEmail, companyId, applicantId, status);
-    }
-
-    @Override
-    public SubscriptionResponse getSubscriptionById(String subscriptionId) {
-        return paymentQueryService.getSubscriptionById(subscriptionId);
-    }
-
-    @Override
-    public SubscriptionResponse getSubscriptionByStripeId(String stripeSubscriptionId) {
-        return paymentQueryService.getSubscriptionByStripeId(stripeSubscriptionId);
-    }
-
-    @Override
-    public PremiumStatusResponse getCompanyPremiumStatus(UUID companyId) {
-        return paymentQueryService.getCompanyPremiumStatus(companyId);
-    }
-
-    @Override
-    public SubscriptionResponse cancelCompanySubscription(UUID companyId, boolean cancelAtPeriodEnd) {
-        return paymentQueryService.cancelCompanySubscription(companyId, cancelAtPeriodEnd);
-    }
-
-    @Override
-    public void handleStripeWebhook(String payload, String stripeSignature) {
-        stripeWebhookService.handleWebhook(payload, stripeSignature);
-    }
-
-    @Override
-    public ExpirationCheckResponse runExpirationCheckNow() {
-        return expirationService.runNow();
-    }
+    return "Payment success event published for userId: " + request.getUserId();
+  }
 }

@@ -47,11 +47,11 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Expose port (Render will override with PORT env var)
-EXPOSE 8081
+EXPOSE 8083
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8081}/actuator/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8083}/actuator/health || exit 1
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]

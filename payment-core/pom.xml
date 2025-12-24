@@ -67,6 +67,12 @@
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
+        <!-- Spring Cloud Commons for DiscoveryClient (Kafka discovery via Eureka) -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-commons</artifactId>
+        </dependency>
+
         <!-- JWT/JWE -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

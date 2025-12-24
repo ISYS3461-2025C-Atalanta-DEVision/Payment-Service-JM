@@ -25,9 +25,9 @@
         </dependency>
 
         <!--
-            INTERNAL IMPLEMENTATION - Controllers CANNOT import from here!
-            scope=runtime means compile-time invisible, runtime-only available
+            INTERNAL IMPLEMENTATION
             Contains: Internal DTOs, Service implementations, Entities, Config
+            Runtime scope enforces that controllers only use external interfaces from payment-api
         -->
         <dependency>
             <groupId>com.devision.jm</groupId>
