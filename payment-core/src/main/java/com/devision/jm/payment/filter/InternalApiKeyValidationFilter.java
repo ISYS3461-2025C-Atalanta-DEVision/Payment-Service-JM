@@ -40,12 +40,13 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
 
 
-    // Endpoints that can be accessed without internal API key (for health checks, OAuth2, etc.)
+    // Endpoints that can be accessed without internal API key (for health checks, OAuth2, webhooks, etc.)
     private static final List<String> ALLOWED_WITHOUT_KEY = List.of(
             "/actuator/health",
             "/actuator/info",
             "/oauth2/",           // OAuth2 authorization endpoints
-            "/login/oauth2/"      // OAuth2 callback endpoints
+            "/login/oauth2/",     // OAuth2 callback endpoints
+            "/api/payments/webhooks/"  // Stripe webhooks (authenticated via signature)
     );
 
     @Value("${internal.api-key}")
