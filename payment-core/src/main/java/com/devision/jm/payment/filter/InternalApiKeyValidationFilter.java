@@ -56,6 +56,12 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
     private boolean validationEnabled;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return isAllowedWithoutKey(path);
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {

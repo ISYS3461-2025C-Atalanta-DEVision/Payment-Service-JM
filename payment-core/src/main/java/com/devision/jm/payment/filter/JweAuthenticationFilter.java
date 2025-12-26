@@ -48,10 +48,22 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String REVOKED_TOKEN_PREFIX = "revoked:";
 
+    // Paths that don't require JWE authentication (webhooks use Stripe signature instead)
+    private static final List<String> PUBLIC_PATHS = List.of(
+            "/actuator/",
+            "/api/payments/webhooks/",
+            "/api/payments/webhook/"
+    );
+
     private final JweConfig jweConfig;
     private final RedisTemplate<String, String> redisTemplate;
     private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
 
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
