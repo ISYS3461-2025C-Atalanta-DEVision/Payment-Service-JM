@@ -1,16 +1,14 @@
 package com.devision.jm.payment.api.internal.dto;
 
-import java.util.UUID;
-
 public class CreateSubscriptionCommand {
 
-    private UUID companyId;
-    private UUID applicantId;
+    private String companyId;
+    private String applicantId;
     private String payerEmail;
     private String planType;
     private String currency;
 
-    public CreateSubscriptionCommand(UUID companyId, UUID applicantId, String payerEmail, String planType, String currency) {
+    public CreateSubscriptionCommand(String companyId, String applicantId, String payerEmail, String planType, String currency) {
         this.companyId = companyId;
         this.applicantId = applicantId;
         this.payerEmail = payerEmail;
@@ -18,11 +16,11 @@ public class CreateSubscriptionCommand {
         this.currency = currency;
     }
 
-    public UUID getCompanyId() {
+    public String getCompanyId() {
         return companyId;
     }
 
-    public UUID getApplicantId() {
+    public String getApplicantId() {
         return applicantId;
     }
 

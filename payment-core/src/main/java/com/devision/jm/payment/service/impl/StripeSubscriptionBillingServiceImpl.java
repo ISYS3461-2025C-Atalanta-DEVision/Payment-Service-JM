@@ -167,10 +167,13 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     }
 
     private void validateCommand(CreateSubscriptionCommand command) {
-        if (command.getCompanyId() == null && command.getApplicantId() == null) {
+        boolean hasCompanyId = command.getCompanyId() != null && !command.getCompanyId().isBlank();
+        boolean hasApplicantId = command.getApplicantId() != null && !command.getApplicantId().isBlank();
+
+        if (!hasCompanyId && !hasApplicantId) {
             throw new IllegalArgumentException("Either companyId or applicantId must be provided");
         }
-        if (command.getCompanyId() != null && command.getApplicantId() != null) {
+        if (hasCompanyId && hasApplicantId) {
             throw new IllegalArgumentException("Only one of companyId or applicantId should be provided");
         }
         if (command.getPayerEmail() == null || command.getPayerEmail().isBlank()) {

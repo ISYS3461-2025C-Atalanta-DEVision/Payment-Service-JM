@@ -15,10 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -58,7 +56,7 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
     }
 
     @Override
-    public List<TransactionResponse> findTransactions(String payerEmail, UUID companyId, UUID applicantId, String status) {
+    public List<TransactionResponse> findTransactions(String payerEmail, String companyId, String applicantId, String status) {
         log.info("Finding transactions - payerEmail: {}, companyId: {}, applicantId: {}, status: {}",
                 payerEmail, companyId, applicantId, status);
 
@@ -99,7 +97,7 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
     }
 
     @Override
-    public PremiumStatusResponse getCompanyPremiumStatus(UUID companyId) {
+    public PremiumStatusResponse getCompanyPremiumStatus(String companyId) {
         log.info("Getting premium status for company: {}", companyId);
 
         // Find active subscription for this company
@@ -124,7 +122,7 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
     }
 
     @Override
-    public SubscriptionResponse cancelCompanySubscription(UUID companyId, boolean cancelAtPeriodEnd) {
+    public SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd) {
         log.info("Cancelling subscription for company: {}, cancelAtPeriodEnd: {}", companyId, cancelAtPeriodEnd);
 
         // Find active subscription for this company

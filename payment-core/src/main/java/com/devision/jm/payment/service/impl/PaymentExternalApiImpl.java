@@ -18,7 +18,6 @@ import com.devision.jm.payment.api.internal.interfaces.StripeWebhookService;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class PaymentExternalApiImpl implements PaymentExternalApi {
@@ -66,7 +65,7 @@ public class PaymentExternalApiImpl implements PaymentExternalApi {
     }
 
     @Override
-    public List<TransactionResponse> findTransactions(String payerEmail, UUID companyId, UUID applicantId, String status) {
+    public List<TransactionResponse> findTransactions(String payerEmail, String companyId, String applicantId, String status) {
         if (paymentQueryService == null) {
             return Collections.emptyList();
         }
@@ -84,12 +83,12 @@ public class PaymentExternalApiImpl implements PaymentExternalApi {
     }
 
     @Override
-    public PremiumStatusResponse getCompanyPremiumStatus(UUID companyId) {
+    public PremiumStatusResponse getCompanyPremiumStatus(String companyId) {
         return paymentQueryService.getCompanyPremiumStatus(companyId);
     }
 
     @Override
-    public SubscriptionResponse cancelCompanySubscription(UUID companyId, boolean cancelAtPeriodEnd) {
+    public SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd) {
         return paymentQueryService.cancelCompanySubscription(companyId, cancelAtPeriodEnd);
     }
 

@@ -1,10 +1,8 @@
 package com.devision.jm.payment.api.external.dto;
 
-import java.util.UUID;
-
 public class PremiumStatusResponse {
 
-    private UUID companyId;
+    private String companyId;
     private boolean premium;
     private String status;
     private String endDate;
@@ -12,14 +10,14 @@ public class PremiumStatusResponse {
     public PremiumStatusResponse() {
     }
 
-    public PremiumStatusResponse(UUID companyId, boolean premium, String status, String endDate) {
+    public PremiumStatusResponse(String companyId, boolean premium, String status, String endDate) {
         this.companyId = companyId;
         this.premium = premium;
         this.status = status;
         this.endDate = endDate;
     }
 
-    public UUID getCompanyId() {
+    public String getCompanyId() {
         return companyId;
     }
 

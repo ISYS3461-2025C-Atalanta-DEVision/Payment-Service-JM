@@ -1,22 +1,20 @@
 package com.devision.jm.payment.api.external.dto;
 
-import java.util.UUID;
-
 
 public class SubscriptionRequest {
 
-    private UUID companyId;
-    private UUID applicantId;
+    private String companyId;
+    private String applicantId;
     private String payerEmail;
     private String planType;      // PREMIUM
     private String currency;
 
     public SubscriptionRequest() {
     }
-    public UUID getCompanyId() {
+    public String getCompanyId() {
         return companyId;
     }
-    public UUID getApplicantId() {
+    public String getApplicantId() {
         return applicantId;
     }
     public String getPayerEmail() {
@@ -28,10 +26,10 @@ public class SubscriptionRequest {
     public String getCurrency() {
         return currency;
     }
-    public void setCompanyId(UUID companyId) {
+    public void setCompanyId(String companyId) {
         this.companyId = companyId;
     }
-    public void setApplicantId(UUID applicantId) {
+    public void setApplicantId(String applicantId) {
         this.applicantId = applicantId;
     }
     public void setPayerEmail(String payerEmail) {

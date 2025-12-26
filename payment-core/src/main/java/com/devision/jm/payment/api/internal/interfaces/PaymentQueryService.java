@@ -5,19 +5,18 @@ import com.devision.jm.payment.api.external.dto.TransactionResponse;
 import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
 
 import java.util.List;
-import java.util.UUID;
 
 public interface PaymentQueryService {
     TransactionResponse getTransactionById(String transactionId);
 
-    List<TransactionResponse> findTransactions(String payerEmail, UUID companyId, UUID applicantId, String status);
+    List<TransactionResponse> findTransactions(String payerEmail, String companyId, String applicantId, String status);
 
     SubscriptionResponse getSubscriptionById(String subscriptionId);
 
     SubscriptionResponse getSubscriptionByStripeId(String stripeSubscriptionId);
 
-    PremiumStatusResponse getCompanyPremiumStatus(UUID companyId);
+    PremiumStatusResponse getCompanyPremiumStatus(String companyId);
 
-    SubscriptionResponse cancelCompanySubscription(UUID companyId, boolean cancelAtPeriodEnd);
+    SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd);
 
 }

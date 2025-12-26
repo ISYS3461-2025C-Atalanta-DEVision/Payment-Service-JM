@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -39,8 +38,8 @@ public class PaymentController {
     @GetMapping("/transactions")
     public ResponseEntity<List<TransactionResponse>> findTransactions(
             @RequestParam(required = false) String payerEmail,
-            @RequestParam(required = false) UUID companyId,
-            @RequestParam(required = false) UUID applicantId,
+            @RequestParam(required = false) String companyId,
+            @RequestParam(required = false) String applicantId,
             @RequestParam(required = false) String status
     ) {
         return ResponseEntity.ok(paymentExternalApi.findTransactions(payerEmail, companyId, applicantId, status));
@@ -60,14 +59,14 @@ public class PaymentController {
 
     // 6) Premium status for company profile page
     @GetMapping("/premium/company/{companyId}")
-    public ResponseEntity<PremiumStatusResponse> getCompanyPremiumStatus(@PathVariable UUID companyId) {
+    public ResponseEntity<PremiumStatusResponse> getCompanyPremiumStatus(@PathVariable String companyId) {
         return ResponseEntity.ok(paymentExternalApi.getCompanyPremiumStatus(companyId));
     }
 
     // 7) Cancel company subscription (optional)
     @PostMapping("/subscriptions/company/{companyId}/cancel")
     public ResponseEntity<SubscriptionResponse> cancelCompanySubscription(
-            @PathVariable UUID companyId,
+            @PathVariable String companyId,
             @RequestParam(defaultValue = "true") boolean cancelAtPeriodEnd
     ) {
         return ResponseEntity.ok(paymentExternalApi.cancelCompanySubscription(companyId, cancelAtPeriodEnd));

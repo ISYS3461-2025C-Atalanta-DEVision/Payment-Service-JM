@@ -3,7 +3,6 @@ package com.devision.jm.payment.model.entity;
 import com.devision.jm.payment.model.enums.SubscriptionStatus;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -11,8 +10,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection = "subscriptions")
 public class Subscription extends BaseEntity {
 
-    private UUID applicantId;
-    private UUID companyId;
+    private String applicantId;
+    private String companyId;
 
     private String payerEmail;
     private String planType;
@@ -31,11 +30,11 @@ public class Subscription extends BaseEntity {
     private String stripeSubscriptionId;
 
 
-    public UUID getApplicantId() {
+    public String getApplicantId() {
         return applicantId;
     }
 
-    public UUID getCompanyId() {
+    public String getCompanyId() {
         return companyId;
     }
 
@@ -83,11 +82,11 @@ public class Subscription extends BaseEntity {
         this.stripeSubscriptionId = stripeSubscriptionId;
     }
 
-    public void setApplicantId(UUID applicantId) {
+    public void setApplicantId(String applicantId) {
         this.applicantId = applicantId;
     }
 
-    public void setCompanyId(UUID companyId) {
+    public void setCompanyId(String companyId) {
         this.companyId = companyId;
     }
 
