@@ -46,13 +46,13 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
         Stripe.apiKey = secretKey;
         validateCommand(command);
 
-        long unitAmount = amountForPlan(command.getPlanType(), command.getCurrency());
+        long unitAmount = amountForPlan(command.getPlanType(), "usd");
 
         // 1) tạo Transaction PENDING trước
         Transaction tx = new Transaction();
         tx.setSubscriptionId(null);
         tx.setAmount(unitAmount);
-        tx.setCurrency(command.getCurrency());
+        tx.setCurrency("USD");
         tx.setPayerEmail(command.getPayerEmail());
         tx.setStatus(TransactionStatus.PENDING);
         tx = transactionRepository.save(tx);
@@ -121,7 +121,7 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
             subEntity.setApplicantId(command.getApplicantId());
             subEntity.setPayerEmail(command.getPayerEmail());
             subEntity.setPlanType(command.getPlanType());
-            subEntity.setCurrency(command.getCurrency());
+            subEntity.setCurrency("USD");
 
             // lúc này chưa paid => coi như chưa active
             subEntity.setStatus(SubscriptionStatus.PENDING);
@@ -161,9 +161,6 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
         if (command.getPayerEmail() == null || command.getPayerEmail().isBlank()) {
             throw new IllegalArgumentException("payerEmail must be provided");
         }
-        if (command.getCurrency() == null || command.getCurrency().isBlank()) {
-            throw new IllegalArgumentException("currency must be provided");
-        }
         if (command.getPlanType() == null || command.getPlanType().isBlank()) {
             throw new IllegalArgumentException("planType must be provided");
         }
@@ -173,8 +170,7 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     }
 
     private long amountForPlan(String planType, String currency) {
-        String c = currency.trim().toLowerCase();
-        boolean isVnd = c.equals("vnd");
-        return isVnd ? 300000L : 3000L;
+        // $30 USD = 3000 cents
+        return 3000L;
     }
 }
