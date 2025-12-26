@@ -125,7 +125,7 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            logger.debug("Cannot set user authentication: {}", e.getMessage());
+            logger.error("Failed to authenticate JWE token for path {}: {}", path, e.getMessage());
         }
 
         filterChain.doFilter(request, response);
