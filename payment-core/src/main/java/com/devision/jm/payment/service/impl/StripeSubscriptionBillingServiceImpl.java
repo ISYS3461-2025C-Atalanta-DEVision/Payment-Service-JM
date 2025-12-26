@@ -27,11 +27,8 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     @Value("${stripe.secret-key}")
     private String secretKey;
 
-    @Value("${stripe.price-id.usd:}")
-    private String priceIdUsd;
-
-    @Value("${stripe.price-id.vnd:}")
-    private String priceIdVnd;
+    @Value("${stripe.price-id}")
+    private String priceId;
 
     private final TransactionRepository transactionRepository;
     private final SubscriptionRepository subscriptionRepository;
@@ -151,19 +148,10 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     }
 
     private String resolvePriceId(String currency) {
-        String c = currency == null ? "" : currency.trim().toLowerCase();
-
-        if (c.equals("vnd")) {
-            if (priceIdVnd == null || priceIdVnd.isBlank()) {
-                throw new IllegalArgumentException("Missing stripe.price-id.vnd in config");
-            }
-            return priceIdVnd;
+        if (priceId == null || priceId.isBlank()) {
+            throw new IllegalArgumentException("Missing stripe.price-id in config");
         }
-
-        if (priceIdUsd == null || priceIdUsd.isBlank()) {
-            throw new IllegalArgumentException("Missing stripe.price-id.usd in config");
-        }
-        return priceIdUsd;
+        return priceId;
     }
 
     private void validateCommand(CreateSubscriptionCommand command) {
