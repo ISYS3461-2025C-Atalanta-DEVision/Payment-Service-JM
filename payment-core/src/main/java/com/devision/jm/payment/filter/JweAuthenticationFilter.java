@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -60,15 +61,20 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
-    }
-
-    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+
+        String path = request.getRequestURI();
+
+        // For public paths (webhooks, actuator), set anonymous authentication
+        // This allows Spring Security's permitAll() to work correctly
+        if (isPublicPath(path)) {
+            setAnonymousAuthentication(request);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
             String jwe = extractJweFromRequest(request);
 
@@ -174,5 +180,28 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
             logger.error("Redis unavailable for token revocation check: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Check if the path is a public path that doesn't require JWE authentication
+     */
+    private boolean isPublicPath(String path) {
+        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+    }
+
+    /**
+     * Set anonymous authentication for public paths.
+     * This ensures Spring Security's permitAll() works correctly by providing
+     * a valid Authentication object in the SecurityContext.
+     */
+    private void setAnonymousAuthentication(HttpServletRequest request) {
+        AnonymousAuthenticationToken anonymousToken = new AnonymousAuthenticationToken(
+                "anonymous-key",
+                "anonymousUser",
+                List.of(new SimpleGrantedAuthority("ROLE_ANONYMOUS"))
+        );
+        anonymousToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(anonymousToken);
+        logger.debug("Set anonymous authentication for public path: {}", request.getRequestURI());
     }
 }
