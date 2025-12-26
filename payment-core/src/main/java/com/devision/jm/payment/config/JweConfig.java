@@ -74,6 +74,9 @@ public class JweConfig {
             // Generate a 256-bit key using SHA-256 hash
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] keyBytes = digest.digest(keySource.getBytes(StandardCharsets.UTF_8));
+            // Log key derivation info (without exposing secret)
+            logger.debug("Encryption key derived from source length: {}, using encryptionSecret: {}",
+                    keySource.length(), (encryptionSecret != null && !encryptionSecret.isEmpty()));
             return new SecretKeySpec(keyBytes, "AES");
         } catch (NoSuchAlgorithmException e) {
             logger.error("Failed to generate encryption key: {}", e.getMessage());

@@ -77,10 +77,12 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String jwe = extractJweFromRequest(request);
+            logger.debug("JWE token present: {}, path: {}", StringUtils.hasText(jwe), path);
 
             if (StringUtils.hasText(jwe)) {
                 // Decrypt and validate JWE token (2.2.1)
                 JWTClaimsSet claims = decryptAndValidateToken(jwe);
+                logger.debug("JWE decryption result: claims={}", claims != null ? "present" : "null");
 
                 if (claims != null) {
                     // Check if token is revoked in Redis (2.3.2)
@@ -159,10 +161,10 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
             return encryptedJWT.getJWTClaimsSet();
 
         } catch (ParseException e) {
-            logger.debug("Invalid JWE token format: {}", e.getMessage());
+            logger.warn("Invalid JWE token format: {}", e.getMessage());
             return null;
         } catch (JOSEException e) {
-            logger.debug("Failed to decrypt JWE token: {}", e.getMessage());
+            logger.warn("Failed to decrypt JWE token (key mismatch?): {}", e.getMessage());
             return null;
         }
     }

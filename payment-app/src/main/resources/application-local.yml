@@ -44,3 +44,6 @@ stripe:
   webhook-secret: ${STRIPE_WEBHOOK_SECRET}
   success-url: ${STRIPE_SUCCESS_URL:http://localhost:8082/payment/success?session_id={CHECKOUT_SESSION_ID}}
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:8082/payment/cancel}
+  price-id:
+    usd: ${STRIPE_PRICE_ID_USD}
+    vnd: ${STRIPE_PRICE_ID_VND:}

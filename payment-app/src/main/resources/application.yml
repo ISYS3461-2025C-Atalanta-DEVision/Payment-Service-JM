@@ -82,6 +82,14 @@ jwe:
   refresh-token-expiration: 604800000  # 7 days in milliseconds
   issuer: devision-jm-payment-service
 
+# Stripe Configuration
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+  price-id:
+    usd: ${STRIPE_PRICE_ID_USD}
+    vnd: ${STRIPE_PRICE_ID_VND:}
+
 # Application Configuration
 app:
   name: ${APP_NAME}

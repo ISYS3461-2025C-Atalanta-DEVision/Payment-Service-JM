@@ -83,8 +83,8 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
                     )
                     .putMetadata("transactionId", tx.getId())
                     .putMetadata("planType", command.getPlanType())
-                    .putMetadata("companyId", command.getCompanyId() == null ? "" : command.getCompanyId().toString())
-                    .putMetadata("applicantId", command.getApplicantId() == null ? "" : command.getApplicantId().toString())
+                    .putMetadata("companyId", command.getCompanyId() == null ? "" : command.getCompanyId())
+                    .putMetadata("applicantId", command.getApplicantId() == null ? "" : command.getApplicantId())
                     .build();
 
             Subscription stripeSub = Subscription.create(params);
@@ -167,14 +167,8 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     }
 
     private void validateCommand(CreateSubscriptionCommand command) {
-        boolean hasCompanyId = command.getCompanyId() != null && !command.getCompanyId().isBlank();
-        boolean hasApplicantId = command.getApplicantId() != null && !command.getApplicantId().isBlank();
-
-        if (!hasCompanyId && !hasApplicantId) {
-            throw new IllegalArgumentException("Either companyId or applicantId must be provided");
-        }
-        if (hasCompanyId && hasApplicantId) {
-            throw new IllegalArgumentException("Only one of companyId or applicantId should be provided");
+        if (command.getCompanyId() == null || command.getCompanyId().isBlank()) {
+            throw new IllegalArgumentException("companyId must be provided");
         }
         if (command.getPayerEmail() == null || command.getPayerEmail().isBlank()) {
             throw new IllegalArgumentException("payerEmail must be provided");

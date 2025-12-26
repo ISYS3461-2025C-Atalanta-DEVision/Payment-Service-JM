@@ -65,7 +65,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/webhook/**").permitAll()
                         .requestMatchers("/api/payments/webhooks/**").permitAll()
                         .requestMatchers("/api/payments/checkout").permitAll()
-                        .requestMatchers("/api/payments/subscription/intent").permitAll()
                         .anyRequest().authenticated()
                 )
 
