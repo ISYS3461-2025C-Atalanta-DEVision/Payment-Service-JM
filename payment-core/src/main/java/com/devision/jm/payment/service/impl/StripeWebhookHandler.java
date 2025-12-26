@@ -46,11 +46,18 @@ public class StripeWebhookHandler implements StripeWebhookService {
 
     @Override
     public String handleWebhook(String payload, String stripeSignature) {
+        // Validate signature header exists
+        if (stripeSignature == null || stripeSignature.isBlank()) {
+            log.warn("Webhook received without Stripe-Signature header");
+            throw new IllegalArgumentException("Missing Stripe-Signature header");
+        }
+
         Event event;
         try {
             event = Webhook.constructEvent(payload, stripeSignature, endpointSecret);
         } catch (SignatureVerificationException e) {
-            return "invalid signature";
+            log.warn("Webhook signature verification failed: {}", e.getMessage());
+            throw new IllegalArgumentException("Invalid Stripe signature");
         }
 
         String type = event.getType();

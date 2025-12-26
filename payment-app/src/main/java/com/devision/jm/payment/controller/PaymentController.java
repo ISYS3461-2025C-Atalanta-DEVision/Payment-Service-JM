@@ -79,8 +79,13 @@ public class PaymentController {
             @RequestBody String payload,
             @RequestHeader(name = "Stripe-Signature", required = false) String stripeSignature
     ) {
-        paymentExternalApi.handleStripeWebhook(payload, stripeSignature);
-        return ResponseEntity.ok("ok");
+        try {
+            paymentExternalApi.handleStripeWebhook(payload, stripeSignature);
+            return ResponseEntity.ok("ok");
+        } catch (IllegalArgumentException e) {
+            // Missing or invalid signature - return 400 Bad Request
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     // 9) Internal: manual trigger expiration check (for testing)
