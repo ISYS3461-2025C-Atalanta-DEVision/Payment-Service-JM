@@ -100,9 +100,10 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
     public PremiumStatusResponse getCompanyPremiumStatus(String companyId) {
         log.info("Getting premium status for company: {}", companyId);
 
-        // Find active subscription for this company
         Optional<Subscription> activeOpt
-                = subscriptionRepository.findFirstByCompanyIdAndStatusOrderByEndDateDesc(companyId, SubscriptionStatus.ACTIVE);
+                = subscriptionRepository.findFirstByCompanyIdAndStatusOrderByEndDateDesc(
+                        companyId, SubscriptionStatus.ACTIVE
+                );
 
         if (activeOpt.isEmpty()) {
             return new PremiumStatusResponse(companyId, false, "NONE", null);
@@ -110,10 +111,9 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
 
         Subscription activeSub = activeOpt.get();
 
-
-        Subscription activeSub = subscriptions.get(0);
         LocalDate today = LocalDate.now();
-        boolean isPremium = activeSub.getStatus() == SubscriptionStatus.ACTIVE
+        boolean isPremium
+                = activeSub.getStatus() == SubscriptionStatus.ACTIVE
                 && "PREMIUM".equalsIgnoreCase(activeSub.getPlanType())
                 && (activeSub.getEndDate() == null || !activeSub.getEndDate().isBefore(today));
 
@@ -124,6 +124,7 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
                 activeSub.getEndDate() != null ? activeSub.getEndDate().toString() : null
         );
     }
+
 
     @Override
     public SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd) {
