@@ -31,7 +31,7 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
     private final TransactionRepository transactionRepository;
     private final SubscriptionRepository subscriptionRepository;
 
-    @Value("${stripe.api-key:}")
+    @Value("${stripe.secret-key:}")
     private String stripeApiKey;
 
     public PaymentQueryServiceImpl(
@@ -130,52 +130,43 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
     public SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd) {
         log.info("Cancelling subscription for company: {}, cancelAtPeriodEnd: {}", companyId, cancelAtPeriodEnd);
 
-        // Find active subscription for this company
-        Optional<Subscription> subOpt = subscriptionRepository.findAll().stream()
-                .filter(s -> companyId.equals(s.getCompanyId()))
-                .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE)
-                .findFirst();
+        Subscription sub = subscriptionRepository
+                .findFirstByCompanyIdAndStatusOrderByEndDateDesc(companyId, SubscriptionStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException("No active subscription found for company: " + companyId));
 
-        if (subOpt.isEmpty()) {
-            log.warn("No active subscription found for company: {}", companyId);
-            return null;
+        if (sub.getStripeSubscriptionId() == null || sub.getStripeSubscriptionId().isBlank()) {
+            throw new RuntimeException("Subscription missing stripeSubscriptionId: " + sub.getId());
         }
 
-        Subscription sub = subOpt.get();
+        try {
+            Stripe.apiKey = stripeApiKey;
 
-        // Cancel in Stripe if we have a Stripe subscription ID
-        if (sub.getStripeSubscriptionId() != null && !sub.getStripeSubscriptionId().isEmpty()) {
-            try {
-                Stripe.apiKey = stripeApiKey;
-                com.stripe.model.Subscription stripeSub = com.stripe.model.Subscription.retrieve(sub.getStripeSubscriptionId());
+            com.stripe.model.Subscription stripeSub
+                    = com.stripe.model.Subscription.retrieve(sub.getStripeSubscriptionId());
 
-                if (cancelAtPeriodEnd) {
-                    // Cancel at period end
-                    com.stripe.param.SubscriptionUpdateParams params = com.stripe.param.SubscriptionUpdateParams.builder()
-                            .setCancelAtPeriodEnd(true)
-                            .build();
-                    stripeSub.update(params);
-                    sub.setStatus(SubscriptionStatus.CANCELLING);
-                } else {
-                    // Cancel immediately
-                    stripeSub.cancel();
-                    sub.setStatus(SubscriptionStatus.CANCELLED);
-                }
+            if (cancelAtPeriodEnd) {
+                com.stripe.param.SubscriptionUpdateParams params
+                        = com.stripe.param.SubscriptionUpdateParams.builder()
+                                .setCancelAtPeriodEnd(true)
+                                .build();
+                stripeSub.update(params);
 
-                subscriptionRepository.save(sub);
-                log.info("Subscription cancelled for company: {}", companyId);
-
-            } catch (Exception e) {
-                log.error("Error cancelling Stripe subscription: {}", e.getMessage(), e);
+                sub.setStatus(SubscriptionStatus.CANCELLING);
+            } else {
+                stripeSub.cancel();
+                sub.setStatus(SubscriptionStatus.CANCELLED);
             }
-        } else {
-            // No Stripe subscription, just update status
-            sub.setStatus(SubscriptionStatus.CANCELLED);
-            subscriptionRepository.save(sub);
-        }
 
-        return mapToSubscriptionResponse(sub);
+            subscriptionRepository.save(sub);
+            return mapToSubscriptionResponse(sub);
+
+        } catch (Exception e) {
+            log.error("Stripe cancel failed for subId={}, stripeSubId={}",
+                    sub.getId(), sub.getStripeSubscriptionId(), e);
+            throw new RuntimeException("Stripe cancel failed: " + e.getMessage(), e);
+        }
     }
+
 
     private TransactionResponse mapToTransactionResponse(Transaction tx) {
         return new TransactionResponse(
