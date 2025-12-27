@@ -92,4 +92,11 @@ public class PaymentController {
     public ResponseEntity<ExpirationCheckResponse> runExpirationCheckNow() {
         return ResponseEntity.ok(paymentExternalApi.runExpirationCheckNow());
     }
+
+    // 10) Get all subscriptions
+    @GetMapping("/subscriptions/company/{companyId}")
+    public ResponseEntity<List<SubscriptionResponse>> getCompanySubscriptions(@PathVariable String companyId) {
+        return ResponseEntity.ok(paymentExternalApi.getCompanySubscriptions(companyId));
+    }
+
 }

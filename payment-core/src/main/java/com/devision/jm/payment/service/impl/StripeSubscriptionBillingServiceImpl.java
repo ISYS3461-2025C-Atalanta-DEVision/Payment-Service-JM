@@ -20,6 +20,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.Instant;
+import java.time.ZoneId;
 
 @Service
 public class StripeSubscriptionBillingServiceImpl implements SubscriptionBillingService {
@@ -129,9 +131,21 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
             subEntity.setStripeSubscriptionId(stripeSubscriptionId);
             subEntity.setLastTransactionId(tx.getId());
 
-            // có thể để null, webhook invoice.paid sẽ set chuẩn theo Stripe period
-            subEntity.setStartDate(LocalDate.now());
-            subEntity.setEndDate(LocalDate.now()); // tạm, webhook sẽ overwrite
+            long periodStartSec = stripeSub.getCurrentPeriodStart() == null ? 0L : stripeSub.getCurrentPeriodStart();
+            long periodEndSec = stripeSub.getCurrentPeriodEnd() == null ? 0L : stripeSub.getCurrentPeriodEnd();
+
+            ZoneId zone = ZoneId.of("UTC");
+
+            LocalDate startDate = periodStartSec == 0L
+                    ? LocalDate.now(zone)
+                    : Instant.ofEpochSecond(periodStartSec).atZone(zone).toLocalDate();
+
+            LocalDate endDate = periodEndSec == 0L
+                    ? startDate.plusMonths(1)
+                    : Instant.ofEpochSecond(periodEndSec).atZone(zone).toLocalDate();
+
+            subEntity.setStartDate(startDate);
+            subEntity.setEndDate(endDate); 
 
             subscriptionRepository.save(subEntity);
 

@@ -28,4 +28,7 @@ public interface PaymentExternalApi {
     void handleStripeWebhook(String payload, String stripeSignature);
 
     ExpirationCheckResponse runExpirationCheckNow();
+
+    List<SubscriptionResponse> getCompanySubscriptions(String companyId);
+
 }

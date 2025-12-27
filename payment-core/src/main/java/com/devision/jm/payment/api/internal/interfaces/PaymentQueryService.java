@@ -19,4 +19,7 @@ public interface PaymentQueryService {
 
     SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd);
 
+    List<SubscriptionResponse> getCompanySubscriptions(String companyId);
+
+
 }

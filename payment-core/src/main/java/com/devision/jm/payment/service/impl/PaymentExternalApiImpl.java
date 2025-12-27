@@ -101,4 +101,10 @@ public class PaymentExternalApiImpl implements PaymentExternalApi {
     public ExpirationCheckResponse runExpirationCheckNow() {
         return expirationService.runNow();
     }
+
+    @Override
+    public List<SubscriptionResponse> getCompanySubscriptions(String companyId) {
+        return paymentQueryService.getCompanySubscriptions(companyId);
+    }
+
 }

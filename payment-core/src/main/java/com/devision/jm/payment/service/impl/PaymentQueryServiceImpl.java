@@ -101,17 +101,21 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
         log.info("Getting premium status for company: {}", companyId);
 
         // Find active subscription for this company
-        List<Subscription> subscriptions = subscriptionRepository.findAll().stream()
-                .filter(s -> companyId.equals(s.getCompanyId()))
-                .filter(s -> s.getStatus() == SubscriptionStatus.ACTIVE)
-                .collect(Collectors.toList());
+        Optional<Subscription> activeOpt
+                = subscriptionRepository.findFirstByCompanyIdAndStatusOrderByEndDateDesc(companyId, SubscriptionStatus.ACTIVE);
 
-        if (subscriptions.isEmpty()) {
+        if (activeOpt.isEmpty()) {
             return new PremiumStatusResponse(companyId, false, "NONE", null);
         }
 
+        Subscription activeSub = activeOpt.get();
+
+
         Subscription activeSub = subscriptions.get(0);
-        boolean isPremium = activeSub.getEndDate() != null && activeSub.getEndDate().isAfter(LocalDate.now());
+        LocalDate today = LocalDate.now();
+        boolean isPremium = activeSub.getStatus() == SubscriptionStatus.ACTIVE
+                && "PREMIUM".equalsIgnoreCase(activeSub.getPlanType())
+                && (activeSub.getEndDate() == null || !activeSub.getEndDate().isBefore(today));
 
         return new PremiumStatusResponse(
                 companyId,
@@ -192,4 +196,13 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
                 sub.getEndDate() != null ? sub.getEndDate().toString() : null
         );
     }
+
+    @Override
+    public List<SubscriptionResponse> getCompanySubscriptions(String companyId) {
+        return subscriptionRepository.findByCompanyIdOrderByCreatedAtDesc(companyId)
+                .stream()
+                .map(this::mapToSubscriptionResponse)
+                .collect(Collectors.toList());
+    }
+
 }
