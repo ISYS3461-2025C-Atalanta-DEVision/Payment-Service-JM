@@ -30,6 +30,9 @@ public class StripeWebhookHandler implements StripeWebhookService {
     @Value("${stripe.webhook-secret}")
     private String endpointSecret;
 
+    @Value("${stripe.secret-key:}")
+    private String stripeSecretKey;
+
     private final TransactionRepository transactionRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final KafkaProducerService kafkaProducerService;
@@ -58,6 +61,10 @@ public class StripeWebhookHandler implements StripeWebhookService {
         } catch (SignatureVerificationException e) {
             log.warn("Webhook signature verification failed: {}", e.getMessage());
             throw new IllegalArgumentException("Invalid Stripe signature");
+        }
+
+        if (stripeSecretKey != null && !stripeSecretKey.isBlank()) {
+            com.stripe.Stripe.apiKey = stripeSecretKey;
         }
 
         String type = event.getType();
@@ -109,8 +116,8 @@ public class StripeWebhookHandler implements StripeWebhookService {
                                     String userId = subEntity.getCompanyId() != null
                                             ? subEntity.getCompanyId().toString()
                                             : (subEntity.getApplicantId() != null
-                                                    ? subEntity.getApplicantId().toString()
-                                                    : null);
+                                            ? subEntity.getApplicantId().toString()
+                                            : null);
 
                                     if (userId != null) {
                                         PaymentCompletedEvent kafkaEvent = PaymentCompletedEvent.builder()
@@ -169,6 +176,18 @@ public class StripeWebhookHandler implements StripeWebhookService {
                         .ifPresent(tx -> {
                             tx.setStatus(TransactionStatus.FAILED);
                             transactionRepository.save(tx);
+                        });
+
+                LocalDate endDate = (sub.getCurrentPeriodEnd() != null)
+                        ? Instant.ofEpochSecond(sub.getCurrentPeriodEnd())
+                                .atZone(ZoneId.systemDefault()).toLocalDate()
+                        : LocalDate.now();
+
+                subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
+                        .ifPresent(subEntity -> {
+                            subEntity.setStatus(SubscriptionStatus.CANCELLED);
+                            subEntity.setEndDate(endDate);
+                            subscriptionRepository.save(subEntity);
                         });
             }
             return "ok";

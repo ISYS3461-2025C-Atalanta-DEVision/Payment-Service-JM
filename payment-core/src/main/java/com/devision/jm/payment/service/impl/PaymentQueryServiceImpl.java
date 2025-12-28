@@ -155,6 +155,7 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
             } else {
                 stripeSub.cancel();
                 sub.setStatus(SubscriptionStatus.CANCELLED);
+                sub.setEndDate(LocalDate.now());
             }
 
             subscriptionRepository.save(sub);

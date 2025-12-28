@@ -67,7 +67,7 @@ public class PaymentController {
     @PostMapping("/subscriptions/company/{companyId}/cancel")
     public ResponseEntity<SubscriptionResponse> cancelCompanySubscription(
             @PathVariable String companyId,
-            @RequestParam(defaultValue = "true") boolean cancelAtPeriodEnd
+            @RequestParam(defaultValue = "false") boolean cancelAtPeriodEnd
     ) {
         return ResponseEntity.ok(paymentExternalApi.cancelCompanySubscription(companyId, cancelAtPeriodEnd));
     }
