@@ -24,6 +24,9 @@ public class Subscription extends BaseEntity {
 
     private LocalDate lastRenewedDate;
 
+    private LocalDate endingSoonNotifiedOn; // when we sent T-7
+    private LocalDate endedNotifiedOn;      // when we sent T-0
+
     // Mongo id is String, so store lastTransactionId as String (ObjectId string)
     private String lastTransactionId;
 
@@ -32,6 +35,22 @@ public class Subscription extends BaseEntity {
 
     public String getApplicantId() {
         return applicantId;
+    }
+
+    public void setEndingSoonNotifiedOn(LocalDate endingSoonNotifiedOn) {
+        this.endingSoonNotifiedOn = endingSoonNotifiedOn;
+    }
+
+    public void setEndedNotifiedOn(LocalDate endedNotifiedOn) {
+        this.endedNotifiedOn = endedNotifiedOn;
+    }
+
+    public LocalDate getEndingSoonNotifiedOn() {
+        return endingSoonNotifiedOn;
+    }
+
+    public LocalDate getEndedNotifiedOn() {
+        return endedNotifiedOn;
     }
 
     public String getCompanyId() {

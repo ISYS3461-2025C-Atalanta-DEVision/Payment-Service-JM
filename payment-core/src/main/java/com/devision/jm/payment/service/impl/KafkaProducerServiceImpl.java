@@ -1,6 +1,7 @@
 package com.devision.jm.payment.service.impl;
 
 import com.devision.jm.payment.api.internal.dto.PaymentCompletedEvent;
+import com.devision.jm.payment.api.internal.dto.events.SubscriptionNotificationEvent;
 import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -31,6 +32,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
         this.objectMapper.registerModule(new JavaTimeModule());
     }
 
+    //payment completed event
     @Override
     public void publishPaymentCompletedEvent(PaymentCompletedEvent event) {
         try {
@@ -60,4 +62,18 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
             throw new RuntimeException("Failed to publish payment completed event", e);
         }
     }
+
+    //subscription notification event
+    private static final String SUBSCRIPTION_NOTIFICATIONS_TOPIC = "subscription-notifications";
+
+    @Override
+    public void publishSubscriptionNotificationEvent(SubscriptionNotificationEvent event) {
+        try {
+            String eventJson = objectMapper.writeValueAsString(event);
+            kafkaTemplate.send(SUBSCRIPTION_NOTIFICATIONS_TOPIC, event.getUserId(), eventJson);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to publish subscription notification event", e);
+        }
+    }
+
 }

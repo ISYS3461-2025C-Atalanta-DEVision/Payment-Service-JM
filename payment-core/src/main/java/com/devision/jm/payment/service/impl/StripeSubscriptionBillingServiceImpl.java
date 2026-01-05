@@ -16,6 +16,8 @@ import com.stripe.model.PaymentIntent;
 import com.stripe.model.Subscription;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.SubscriptionCreateParams;
+import com.stripe.param.SubscriptionUpdateParams;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -87,6 +89,15 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
                     .build();
 
             Subscription stripeSub = Subscription.create(params);
+
+            try {
+                SubscriptionUpdateParams updateParams = SubscriptionUpdateParams.builder()
+                        .setCancelAtPeriodEnd(true)
+                        .build();
+                stripeSub = stripeSub.update(updateParams);
+            } catch (StripeException e) {
+                throw new RuntimeException("Failed to set cancel_at_period_end: " + e.getMessage(), e);
+            }
 
             // 5) lấy PaymentIntent từ latest_invoice.payment_intent
             Invoice latestInvoice = stripeSub.getLatestInvoiceObject();
