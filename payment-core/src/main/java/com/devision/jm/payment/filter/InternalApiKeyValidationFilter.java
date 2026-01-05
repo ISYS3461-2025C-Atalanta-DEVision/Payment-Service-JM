@@ -46,7 +46,8 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
             "/actuator/info",
             "/oauth2/",           // OAuth2 authorization endpoints
             "/login/oauth2/",     // OAuth2 callback endpoints
-            "/api/payments/webhooks/"  // Stripe webhooks (authenticated via signature)
+            "/api/payments/webhooks",  // Stripe webhooks (authenticated via signature)
+            "/api/payments/webhook"
     );
 
     @Value("${internal.api-key}")

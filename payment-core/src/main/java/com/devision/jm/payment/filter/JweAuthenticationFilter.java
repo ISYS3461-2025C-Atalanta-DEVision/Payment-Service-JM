@@ -52,8 +52,8 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
     // Paths that don't require JWE authentication (webhooks use Stripe signature instead)
     private static final List<String> PUBLIC_PATHS = List.of(
             "/actuator/",
-            "/api/payments/webhooks/",
-            "/api/payments/webhook/"
+            "/api/payments/webhooks",
+            "/api/payments/webhook"
     );
 
     private final JweConfig jweConfig;
