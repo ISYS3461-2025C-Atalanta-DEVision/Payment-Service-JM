@@ -14,7 +14,9 @@ public class SubscriptionExpirationJob {
   private final ExpirationService expirationService;
 
   // Run daily at 00:05 (Vietnam time)
-  @Scheduled(cron = "0 5 0 * * *", zone = "Asia/Ho_Chi_Minh")
+  //@Scheduled(cron = "0 5 0 * * *", zone = "Asia/Ho_Chi_Minh")
+  //for testing
+  @Scheduled(cron = "0 * * * * *", zone = "Asia/Ho_Chi_Minh")
   public void runDaily() {
     log.info("⏰ Running daily expiration check...");
     expirationService.runNow();
