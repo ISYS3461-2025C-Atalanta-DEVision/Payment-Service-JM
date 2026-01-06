@@ -6,6 +6,7 @@ import com.devision.jm.payment.model.enums.SubscriptionStatus;
 import com.devision.jm.payment.model.enums.TransactionStatus;
 import com.devision.jm.payment.repository.SubscriptionRepository;
 import com.devision.jm.payment.repository.TransactionRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.model.Invoice;
@@ -22,6 +23,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stripe.model.StripeObject;
 
 @Slf4j
 @Service
@@ -36,6 +40,9 @@ public class StripeWebhookHandler implements StripeWebhookService {
     private final TransactionRepository transactionRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final KafkaProducerService kafkaProducerService;
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
 
     @Autowired
     public StripeWebhookHandler(
@@ -71,44 +78,80 @@ public class StripeWebhookHandler implements StripeWebhookService {
 
         // 1) update transaction
         if ("invoice.paid".equals(type)) {
-            Invoice invoice = (Invoice) event.getDataObjectDeserializer().getObject().orElse(null);
-            if (invoice == null) {
-                log.warn("invoice.paid but invoice is null");
-                return "ok";
+            Invoice invoice = null;
+
+            // 1) Try safe deserialization
+            try {
+                StripeObject obj = event.getDataObjectDeserializer().getObject().orElse(null);
+                if (obj instanceof Invoice) {
+                invoice = (Invoice) obj;
+                }
+            } catch (Exception e) {
+                log.warn("invoice.paid safe deserialization failed: {}", e.getMessage());
             }
 
+            // 2) Fallback: parse invoiceId from payload and retrieve from Stripe
+            if (invoice == null) {
+                String invoiceId = null;
+                try {
+                JsonNode root = MAPPER.readTree(payload);
+                invoiceId = root.path("data").path("object").path("id").asText();
+                if (invoiceId != null && invoiceId.isBlank()) invoiceId = null;
+                } catch (Exception e) {
+                log.warn("Cannot parse invoiceId from payload: {}", e.getMessage());
+                }
+
+                if (invoiceId == null) {
+                log.warn("invoice.paid but invoice is null AND invoiceId not found in payload. eventId={}", event.getId());
+                return "ok";
+                }
+
+                try {
+                // make sure apiKey is set
+                if (stripeSecretKey != null && !stripeSecretKey.isBlank()) {
+                    com.stripe.Stripe.apiKey = stripeSecretKey;
+                }
+                invoice = Invoice.retrieve(invoiceId);
+                log.info("Fetched invoice from Stripe API. invoiceId={}", invoiceId);
+                } catch (Exception e) {
+                log.error("Failed to retrieve invoice from Stripe. invoiceId={} err={}", invoiceId, e.getMessage(), e);
+                return "ok";
+                }
+            }
+
+            // Now invoice is guaranteed not null
             String stripeSubscriptionId = invoice.getSubscription();
             String paymentIntentId = invoice.getPaymentIntent();
 
-            log.info("🧾 invoice.paid invoiceId={} stripeSubId={} paymentIntent={}",
-                    invoice.getId(), stripeSubscriptionId, paymentIntentId);
+            log.info("🧾 invoice.paid invoiceId={} stripeSubId={} paymentIntentId={}",
+                invoice.getId(), stripeSubscriptionId, paymentIntentId);
 
             if (stripeSubscriptionId == null || stripeSubscriptionId.isBlank()) {
-                log.warn("invoice.paid but missing subscription id. invoiceId={}", invoice.getId());
+                log.warn("invoice.paid but missing stripeSubscriptionId. invoiceId={}", invoice.getId());
                 return "ok";
             }
 
-            // ✅ Update transaction by stripeSubscriptionId (most reliable with your DB design)
+            // Update transaction by stripeSubscriptionId
             transactionRepository.findFirstBySubscriptionIdOrderByCreatedAtDesc(stripeSubscriptionId)
-                    .ifPresentOrElse(tx -> {
-                        log.info("🎯 Found tx id={} currentStatus={}", tx.getId(), tx.getStatus());
+                .ifPresentOrElse(tx -> {
+                log.info("🎯 Found tx id={} oldStatus={}", tx.getId(), tx.getStatus());
 
-                        tx.setStatus(TransactionStatus.COMPLETED);
-                        if (paymentIntentId != null) tx.setStripePaymentId(paymentIntentId);
-                        transactionRepository.save(tx);
+                tx.setStatus(TransactionStatus.COMPLETED);
+                if (paymentIntentId != null) tx.setStripePaymentId(paymentIntentId);
+                transactionRepository.save(tx);
 
-                        log.info("💾 Updated tx COMPLETED id={}", tx.getId());
-                    }, () -> log.warn("❌ No transaction found for stripeSubId={}", stripeSubscriptionId));
+                log.info("✅ Updated tx COMPLETED id={}", tx.getId());
+                }, () -> log.warn("❌ No tx found for stripeSubId={}", stripeSubscriptionId));
 
-            // ✅ Update subscription entity to ACTIVE
+            // Update subscription ACTIVE
             subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
-                    .ifPresentOrElse(subEntity -> {
-                        subEntity.setStatus(SubscriptionStatus.ACTIVE);
-                        subscriptionRepository.save(subEntity);
+                .ifPresentOrElse(subEntity -> {
+                subEntity.setStatus(SubscriptionStatus.ACTIVE);
+                subscriptionRepository.save(subEntity);
 
-                        log.info("💾 Updated subscription ACTIVE id={} stripeSubId={}",
-                                subEntity.getId(), stripeSubscriptionId);
-                    }, () -> log.warn("❌ Subscription not found by stripeSubscriptionId={}", stripeSubscriptionId));
+                log.info("✅ Updated subscription ACTIVE id={} stripeSubId={}",
+                    subEntity.getId(), stripeSubscriptionId);
+                }, () -> log.warn("❌ Subscription not found for stripeSubId={}", stripeSubscriptionId));
 
             return "ok";
         }
