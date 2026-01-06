@@ -38,6 +38,8 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
+    
+
 
 
     // Endpoints that can be accessed without internal API key (for health checks, OAuth2, webhooks, etc.)
@@ -62,6 +64,11 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getRequestURI();
+
+        log.info("🧱 InternalApiKeyFilter path={} hasInternalKey={}",
+                path,
+                request.getHeader(INTERNAL_API_KEY_HEADER) != null
+        );
 
         // Skip validation for allowed endpoints
         if (isAllowedWithoutKey(path)) {

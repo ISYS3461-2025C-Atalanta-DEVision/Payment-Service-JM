@@ -67,6 +67,11 @@ public class JweAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
+        log.info("🛡️ JweFilter path={} hasBearer={}",
+                path,
+                request.getHeader(HttpHeaders.AUTHORIZATION) != null
+        );
+
         // For public paths (webhooks, actuator), set anonymous authentication
         // This allows Spring Security's permitAll() to work correctly
         if (isPublicPath(path)) {

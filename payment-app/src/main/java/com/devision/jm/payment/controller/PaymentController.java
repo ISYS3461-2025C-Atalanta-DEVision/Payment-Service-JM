@@ -9,9 +9,10 @@ import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
 import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-
+@Slf4j
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
@@ -78,6 +79,12 @@ public class PaymentController {
             @RequestBody String payload,
             @RequestHeader(name = "Stripe-Signature", required = false) String stripeSignature
     ) {
+
+        log.info("🔔 WEBHOOK HIT path=/api/payments/webhooks/stripe sigPresent={} payloadSize={}",
+                (stripeSignature != null && !stripeSignature.isBlank()),
+                (payload != null ? payload.length() : 0)
+        );
+
         try {
             paymentExternalApi.handleStripeWebhook(payload, stripeSignature);
             return ResponseEntity.ok("ok");
