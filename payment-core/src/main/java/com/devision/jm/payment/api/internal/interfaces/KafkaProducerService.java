@@ -1,6 +1,7 @@
 package com.devision.jm.payment.api.internal.interfaces;
 
 import com.devision.jm.payment.api.internal.dto.PaymentCompletedEvent;
+import com.devision.jm.payment.api.internal.dto.events.SubscriptionNotificationEvent;
 
 /**
  * Kafka Producer Service Interface
@@ -17,4 +18,6 @@ public interface KafkaProducerService {
      * @param event the payment completed event
      */
     void publishPaymentCompletedEvent(PaymentCompletedEvent event);
+    void publishSubscriptionNotificationEvent(SubscriptionNotificationEvent event);
+
 }

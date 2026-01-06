@@ -6,6 +6,7 @@ import com.devision.jm.payment.model.enums.SubscriptionStatus;
 import com.devision.jm.payment.model.enums.TransactionStatus;
 import com.devision.jm.payment.repository.SubscriptionRepository;
 import com.devision.jm.payment.repository.TransactionRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.model.Invoice;
@@ -22,6 +23,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stripe.model.StripeObject;
 
 @Slf4j
 @Service
@@ -37,6 +41,9 @@ public class StripeWebhookHandler implements StripeWebhookService {
     private final SubscriptionRepository subscriptionRepository;
     private final KafkaProducerService kafkaProducerService;
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+
     @Autowired
     public StripeWebhookHandler(
             TransactionRepository transactionRepository,
@@ -51,99 +58,103 @@ public class StripeWebhookHandler implements StripeWebhookService {
     public String handleWebhook(String payload, String stripeSignature) {
         // Validate signature header exists
         if (stripeSignature == null || stripeSignature.isBlank()) {
-            log.warn("Webhook received without Stripe-Signature header");
-            throw new IllegalArgumentException("Missing Stripe-Signature header");
-        }
+      throw new IllegalArgumentException("Missing Stripe-Signature header");
+    }
+    if (endpointSecret == null || endpointSecret.isBlank()) {
+      throw new IllegalArgumentException("Stripe webhook secret not configured");
+    }
 
-        Event event;
-        try {
-            event = Webhook.constructEvent(payload, stripeSignature, endpointSecret);
-        } catch (SignatureVerificationException e) {
-            log.warn("Webhook signature verification failed: {}", e.getMessage());
-            throw new IllegalArgumentException("Invalid Stripe signature");
-        }
-
-        if (stripeSecretKey != null && !stripeSecretKey.isBlank()) {
-            com.stripe.Stripe.apiKey = stripeSecretKey;
-        }
+    final Event event;
+    try {
+      event = Webhook.constructEvent(payload, stripeSignature, endpointSecret);
+    } catch (SignatureVerificationException e) {
+      throw new IllegalArgumentException("Invalid Stripe signature");
+    }
 
         String type = event.getType();
 
         // 1) update transaction
         if ("invoice.paid".equals(type)) {
-            Invoice invoice = (Invoice) event.getDataObjectDeserializer().getObject().orElse(null);
-            if (invoice != null) {
-                String stripeSubscriptionId = invoice.getSubscription();
-                String paymentIntentId = invoice.getPaymentIntent();
+            Invoice invoice = null;
 
-                // update "latest" tx của subscription
-                transactionRepository.findBySubscriptionIdOrderByCreatedAtDesc(stripeSubscriptionId)
-                        .stream()
-                        .findFirst()
-                        .ifPresent(tx -> {
-                            tx.setStatus(TransactionStatus.COMPLETED);
-                            tx.setStripePaymentId(paymentIntentId);
-                            transactionRepository.save(tx);
-                        });
-
-                // 2) update subscription entity in DB and publish Kafka event
-                subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
-                        .ifPresent(subEntity -> {
-                            try {
-                                // fetch Stripe subscription to get period end
-                                Subscription stripeSub = Subscription.retrieve(stripeSubscriptionId);
-
-                                long periodStartSec = stripeSub.getCurrentPeriodStart() == null ? 0L : stripeSub.getCurrentPeriodStart();
-                                long periodEndSec = stripeSub.getCurrentPeriodEnd() == null ? 0L : stripeSub.getCurrentPeriodEnd();
-
-                                LocalDate startDate = periodStartSec == 0L
-                                        ? LocalDate.now()
-                                        : Instant.ofEpochSecond(periodStartSec).atZone(ZoneId.systemDefault()).toLocalDate();
-
-                                LocalDate endDate = periodEndSec == 0L
-                                        ? LocalDate.now().plusMonths(1)
-                                        : Instant.ofEpochSecond(periodEndSec).atZone(ZoneId.systemDefault()).toLocalDate();
-
-                                subEntity.setStatus(SubscriptionStatus.ACTIVE);
-                                subEntity.setStartDate(startDate);
-                                subEntity.setEndDate(endDate);
-                                subEntity.setLastRenewedDate(LocalDate.now());
-
-                                subscriptionRepository.save(subEntity);
-
-                                // 3) Publish Kafka event to notify Profile Service
-                                if (kafkaProducerService != null) {
-                                    String userId = subEntity.getCompanyId() != null
-                                            ? subEntity.getCompanyId().toString()
-                                            : (subEntity.getApplicantId() != null
-                                            ? subEntity.getApplicantId().toString()
-                                            : null);
-
-                                    if (userId != null) {
-                                        PaymentCompletedEvent kafkaEvent = PaymentCompletedEvent.builder()
-                                                .userId(userId)
-                                                .planType(subEntity.getPlanType())
-                                                .paidAt(LocalDateTime.now())
-                                                .build();
-
-                                        log.info("Publishing PaymentCompletedEvent for userId: {}, planType: {}",
-                                                userId, subEntity.getPlanType());
-                                        kafkaProducerService.publishPaymentCompletedEvent(kafkaEvent);
-                                    } else {
-                                        log.warn("Cannot publish Kafka event: no companyId or applicantId found for subscription {}",
-                                                stripeSubscriptionId);
-                                    }
-                                } else {
-                                    log.warn("KafkaProducerService not available, skipping Kafka event");
-                                }
-
-                            } catch (Exception e) {
-                                log.error("Error processing invoice.paid webhook: {}", e.getMessage(), e);
-                            }
-                        });
+            // 1) Try safe deserialization
+            try {
+                StripeObject obj = event.getDataObjectDeserializer().getObject().orElse(null);
+                if (obj instanceof Invoice) {
+                invoice = (Invoice) obj;
+                }
+            } catch (Exception e) {
+                log.warn("invoice.paid safe deserialization failed: {}", e.getMessage());
             }
+
+            // 2) Fallback: parse invoiceId from payload and retrieve from Stripe
+            if (invoice == null) {
+                String invoiceId = null;
+                try {
+                JsonNode root = MAPPER.readTree(payload);
+                invoiceId = root.path("data").path("object").path("id").asText();
+                if (invoiceId != null && invoiceId.isBlank()) invoiceId = null;
+                } catch (Exception e) {
+                log.warn("Cannot parse invoiceId from payload: {}", e.getMessage());
+                }
+
+                if (invoiceId == null) {
+                log.warn("invoice.paid but invoice is null AND invoiceId not found in payload. eventId={}", event.getId());
+                return "ok";
+                }
+
+                try {
+                // make sure apiKey is set
+                if (stripeSecretKey != null && !stripeSecretKey.isBlank()) {
+                    com.stripe.Stripe.apiKey = stripeSecretKey;
+                }
+                invoice = Invoice.retrieve(invoiceId);
+                log.info("Fetched invoice from Stripe API. invoiceId={}", invoiceId);
+                } catch (Exception e) {
+                log.error("Failed to retrieve invoice from Stripe. invoiceId={} err={}", invoiceId, e.getMessage(), e);
+                return "ok";
+                }
+            }
+
+            // Now invoice is guaranteed not null
+            String stripeSubscriptionId = invoice.getSubscription();
+            String paymentIntentId = invoice.getPaymentIntent();
+
+            log.info("🧾 invoice.paid invoiceId={} stripeSubId={} paymentIntentId={}",
+                invoice.getId(), stripeSubscriptionId, paymentIntentId);
+
+            if (stripeSubscriptionId == null || stripeSubscriptionId.isBlank()) {
+                log.warn("invoice.paid but missing stripeSubscriptionId. invoiceId={}", invoice.getId());
+                return "ok";
+            }
+
+            // Update transaction by stripeSubscriptionId
+            transactionRepository.findFirstBySubscriptionIdOrderByCreatedAtDesc(stripeSubscriptionId)
+                .ifPresentOrElse(tx -> {
+                log.info("🎯 Found tx id={} oldStatus={}", tx.getId(), tx.getStatus());
+
+                tx.setStatus(TransactionStatus.COMPLETED);
+                if (paymentIntentId != null) tx.setStripePaymentId(paymentIntentId);
+                transactionRepository.save(tx);
+
+                log.info("✅ Updated tx COMPLETED id={}", tx.getId());
+                }, () -> log.warn("❌ No tx found for stripeSubId={}", stripeSubscriptionId));
+
+            // Update subscription ACTIVE
+            subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
+                .ifPresentOrElse(subEntity -> {
+                subEntity.setStatus(SubscriptionStatus.ACTIVE);
+                subscriptionRepository.save(subEntity);
+
+                log.info("✅ Updated subscription ACTIVE id={} stripeSubId={}",
+                    subEntity.getId(), stripeSubscriptionId);
+                }, () -> log.warn("❌ Subscription not found for stripeSubId={}", stripeSubscriptionId));
+
             return "ok";
         }
+
+
+
 
         if ("invoice.payment_failed".equals(type)) {
             Invoice invoice = (Invoice) event.getDataObjectDeserializer().getObject().orElse(null);

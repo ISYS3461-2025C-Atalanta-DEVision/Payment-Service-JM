@@ -16,6 +16,8 @@ import com.stripe.model.PaymentIntent;
 import com.stripe.model.Subscription;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.SubscriptionCreateParams;
+import com.stripe.param.SubscriptionUpdateParams;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -87,6 +89,15 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
                     .build();
 
             Subscription stripeSub = Subscription.create(params);
+
+            try {
+                SubscriptionUpdateParams updateParams = SubscriptionUpdateParams.builder()
+                        .setCancelAtPeriodEnd(true)
+                        .build();
+                stripeSub = stripeSub.update(updateParams);
+            } catch (StripeException e) {
+                throw new RuntimeException("Failed to set cancel_at_period_end: " + e.getMessage(), e);
+            }
 
             // 5) lấy PaymentIntent từ latest_invoice.payment_intent
             Invoice latestInvoice = stripeSub.getLatestInvoiceObject();
@@ -169,19 +180,26 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     }
 
     private void validateCommand(CreateSubscriptionCommand command) {
-        if (command.getCompanyId() == null || command.getCompanyId().isBlank()) {
-            throw new IllegalArgumentException("companyId must be provided");
+    boolean hasCompanyId = command.getCompanyId() != null && !command.getCompanyId().isBlank();
+    boolean hasApplicantId = command.getApplicantId() != null && !command.getApplicantId().isBlank();
+
+        if (!hasCompanyId && !hasApplicantId) {
+            throw new IllegalArgumentException("Either companyId or applicantId must be provided");
         }
+
         if (command.getPayerEmail() == null || command.getPayerEmail().isBlank()) {
             throw new IllegalArgumentException("payerEmail must be provided");
         }
+
         if (command.getPlanType() == null || command.getPlanType().isBlank()) {
             throw new IllegalArgumentException("planType must be provided");
         }
+
         if (!"PREMIUM".equalsIgnoreCase(command.getPlanType())) {
             throw new IllegalArgumentException("Only PREMIUM is supported");
         }
     }
+
 
     private long amountForPlan(String planType, String currency) {
         // $30 USD = 3000 cents

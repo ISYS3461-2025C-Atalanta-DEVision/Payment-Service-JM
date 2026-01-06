@@ -7,4 +7,7 @@ import java.util.Optional;
 public interface TransactionRepository extends MongoRepository<Transaction, String> {
     List<Transaction> findBySubscriptionIdOrderByCreatedAtDesc(String subscriptionId);
     Optional<Transaction> findByStripeCheckoutSessionId(String stripeCheckoutSessionId);
+
+    Optional<Transaction> findFirstBySubscriptionIdOrderByCreatedAtDesc(String subscriptionId);
+
 }

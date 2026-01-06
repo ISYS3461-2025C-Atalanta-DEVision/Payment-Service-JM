@@ -70,10 +70,11 @@ eureka:
     instance-id: ${spring.application.name}:${server.port}
 
 # Internal API Key for Gateway-to-Service communication
+
 internal:
-  api-key: ${INTERNAL_API_KEY}
+  api-key: ${INTERNAL_API_KEY:jm-devision-internal-2024}
   api-key-validation:
-    enabled: ${INTERNAL_API_KEY_VALIDATION}
+    enabled: ${INTERNAL_API_KEY_VALIDATION:true}
 
 # JWE Configuration (2.1.2)
 jwe:

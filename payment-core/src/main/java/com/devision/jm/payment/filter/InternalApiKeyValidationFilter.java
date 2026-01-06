@@ -1,15 +1,11 @@
 package com.devision.jm.payment.filter;
 
-import com.devision.jm.payment.config.MongoConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -25,7 +21,7 @@ import java.util.Map;
  *
  * Validates that requests come from the API Gateway by checking
  * the X-Internal-Api-Key header. This prevents direct access to
- * the Auth Service bypassing the Gateway.
+ * the Profile Service bypassing the Gateway.
  *
  * Security: Rejects requests without valid internal API key in production.
  */
@@ -37,16 +33,11 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
     public static final String INTERNAL_API_KEY_HEADER = "X-Internal-Api-Key";
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
 
-
-    // Endpoints that can be accessed without internal API key (for health checks, OAuth2, webhooks, etc.)
+    // Endpoints that can be accessed without internal API key (for health checks)
     private static final List<String> ALLOWED_WITHOUT_KEY = List.of(
             "/actuator/health",
-            "/actuator/info",
-            "/oauth2/",           // OAuth2 authorization endpoints
-            "/login/oauth2/",     // OAuth2 callback endpoints
-            "/api/payments/webhooks/"  // Stripe webhooks (authenticated via signature)
+            "/actuator/info"
     );
 
     @Value("${internal.api-key}")
@@ -70,7 +61,7 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
 
         // Skip validation if disabled (for local development)
         if (!validationEnabled) {
-            logger.debug("Internal API key validation disabled, allowing request to: {}", path);
+            log.debug("Internal API key validation disabled, allowing request to: {}", path);
             filterChain.doFilter(request, response);
             return;
         }
@@ -79,20 +70,20 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
         String providedApiKey = request.getHeader(INTERNAL_API_KEY_HEADER);
 
         if (providedApiKey == null || providedApiKey.isBlank()) {
-            logger.warn("Missing internal API key header for request to: {} from IP: {}",
+            log.warn("Missing internal API key header for request to: {} from IP: {}",
                     path, request.getRemoteAddr());
             sendForbiddenResponse(response, "Missing internal API key");
             return;
         }
 
         if (!expectedApiKey.equals(providedApiKey)) {
-            logger.warn("Invalid internal API key for request to: {} from IP: {}",
+            log.warn("Invalid internal API key for request to: {} from IP: {}",
                     path, request.getRemoteAddr());
             sendForbiddenResponse(response, "Invalid internal API key");
             return;
         }
 
-        logger.debug("Valid internal API key for request to: {}", path);
+        log.debug("Valid internal API key for request to: {}", path);
         filterChain.doFilter(request, response);
     }
 
@@ -110,4 +101,12 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
         );
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
+        String path = request.getRequestURI();
+        return path.startsWith("/api/payments/webhooks/stripe");                    
+    }
+
 }

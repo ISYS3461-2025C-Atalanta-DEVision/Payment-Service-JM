@@ -9,9 +9,10 @@ import com.devision.jm.payment.api.external.interfaces.PaymentExternalApi;
 import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-
+@Slf4j
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
@@ -72,20 +73,31 @@ public class PaymentController {
         return ResponseEntity.ok(paymentExternalApi.cancelCompanySubscription(companyId, cancelAtPeriodEnd));
     }
 
-    // 8) Stripe webhook
     @PostMapping("/webhooks/stripe")
     public ResponseEntity<String> stripeWebhook(
-            @RequestBody String payload,
-            @RequestHeader(name = "Stripe-Signature", required = false) String stripeSignature
+    @RequestBody String payload,
+    @RequestHeader(name = "Stripe-Signature", required = false) String stripeSignature
     ) {
-        try {
-            paymentExternalApi.handleStripeWebhook(payload, stripeSignature);
-            return ResponseEntity.ok("ok");
-        } catch (IllegalArgumentException e) {
-            // Missing or invalid signature - return 400 Bad Request
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    log.info("🔔 WEBHOOK HIT path=/api/payments/webhooks/stripe sigPresent={} payloadSize={}",
+        (stripeSignature != null && !stripeSignature.isBlank()),
+        (payload != null ? payload.length() : 0)
+    );
+
+    if (stripeSignature == null || stripeSignature.isBlank()) {
+        return ResponseEntity.badRequest().body("Missing Stripe-Signature header");
     }
+
+    try {
+        paymentExternalApi.handleStripeWebhook(payload, stripeSignature);
+        return ResponseEntity.ok("ok");
+    } catch (IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    } catch (Exception e) {
+        log.error("Stripe webhook failed", e);
+        return ResponseEntity.status(500).body("Webhook error");
+    }
+    }
+
 
     // 9) Internal: manual trigger expiration check (for testing)
     @PostMapping("/internal/subscriptions/run-expiration-check")
