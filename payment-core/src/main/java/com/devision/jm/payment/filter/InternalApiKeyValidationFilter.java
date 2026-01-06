@@ -44,13 +44,15 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
 
     // Endpoints that can be accessed without internal API key (for health checks, OAuth2, webhooks, etc.)
     private static final List<String> ALLOWED_WITHOUT_KEY = List.of(
-            "/actuator/health",
-            "/actuator/info",
-            "/oauth2/",           // OAuth2 authorization endpoints
-            "/login/oauth2/",     // OAuth2 callback endpoints
-            "/api/payments/webhooks",  // Stripe webhooks (authenticated via signature)
-            "/api/payments/webhook"
+        "/",
+        "/actuator/health",
+        "/actuator/info"
+        // "/oauth2/",
+        // "/login/oauth2/",
+        // "/api/payments/webhooks",
+        // "/api/payments/webhook"
     );
+
 
     @Value("${internal.api-key}")
     private String expectedApiKey;
