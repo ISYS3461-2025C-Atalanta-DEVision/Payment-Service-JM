@@ -180,19 +180,26 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     }
 
     private void validateCommand(CreateSubscriptionCommand command) {
-        if (command.getCompanyId() == null || command.getCompanyId().isBlank()) {
-            throw new IllegalArgumentException("companyId must be provided");
+    boolean hasCompanyId = command.getCompanyId() != null && !command.getCompanyId().isBlank();
+    boolean hasApplicantId = command.getApplicantId() != null && !command.getApplicantId().isBlank();
+
+        if (!hasCompanyId && !hasApplicantId) {
+            throw new IllegalArgumentException("Either companyId or applicantId must be provided");
         }
+
         if (command.getPayerEmail() == null || command.getPayerEmail().isBlank()) {
             throw new IllegalArgumentException("payerEmail must be provided");
         }
+
         if (command.getPlanType() == null || command.getPlanType().isBlank()) {
             throw new IllegalArgumentException("planType must be provided");
         }
+
         if (!"PREMIUM".equalsIgnoreCase(command.getPlanType())) {
             throw new IllegalArgumentException("Only PREMIUM is supported");
         }
     }
+
 
     private long amountForPlan(String planType, String currency) {
         // $30 USD = 3000 cents

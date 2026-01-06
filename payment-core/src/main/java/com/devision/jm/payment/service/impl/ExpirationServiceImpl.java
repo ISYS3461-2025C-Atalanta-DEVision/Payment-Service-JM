@@ -74,6 +74,10 @@ public class ExpirationServiceImpl implements ExpirationService {
                     subscriptionRepository.save(sub);
                     endingSoonNotified++;
                 }
+
+                log.info("🔔 EXPIRATION EVENT {} userId={} plan={} endDate={} today={}",
+        "ENDING_SOON", userId, sub.getPlanType(), endDate, today);
+
             }
 
             // T-0 notify + expire on the end day
@@ -95,6 +99,9 @@ public class ExpirationServiceImpl implements ExpirationService {
                     endedNotified++;
                     expiredCount++;
                 }
+                log.info("🔔 EXPIRATION EVENT {} userId={} plan={} endDate={} today={}",
+        "ENDED", userId, sub.getPlanType(), endDate, today);
+
             }
 
             // Safety: if somehow endDate already passed but still active

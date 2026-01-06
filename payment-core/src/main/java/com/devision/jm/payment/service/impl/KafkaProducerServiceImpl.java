@@ -74,6 +74,10 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to publish subscription notification event", e);
         }
+        
+        log.info("📣 Publishing SubscriptionNotificationEvent type={} userId={} endDate={} daysLeft={}",
+        event.getEventType(), event.getUserId(), event.getEndDate(), event.getDaysLeft());
+
     }
 
 }
