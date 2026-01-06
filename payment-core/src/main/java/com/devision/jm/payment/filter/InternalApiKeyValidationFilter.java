@@ -101,4 +101,12 @@ public class InternalApiKeyValidationFilter extends OncePerRequestFilter {
         );
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
+        String path = request.getRequestURI();
+        return path.startsWith("/api/payments/webhooks/stripe");                    
+    }
+
 }
