@@ -72,49 +72,47 @@ public class StripeWebhookHandler implements StripeWebhookService {
         // 1) update transaction
         if ("invoice.paid".equals(type)) {
             Invoice invoice = (Invoice) event.getDataObjectDeserializer().getObject().orElse(null);
-            if (invoice == null) return "ok";
-
-            final String stripeSubscriptionId = invoice.getSubscription(); 
-            final String paymentIntentId = invoice.getPaymentIntent();
-
-            String txId = null;
-            try {
-                if (invoice.getLines() != null
-                    && invoice.getLines().getData() != null
-                    && !invoice.getLines().getData().isEmpty()) {
-                txId = invoice.getLines().getData().get(0).getMetadata().get("transactionId");
-                }
-            } catch (Exception ignored) {}
-
-            if (txId == null || txId.isBlank()) {
-                log.warn("invoice.paid but missing transactionId metadata. invoice={}", invoice.getId());
+            if (invoice == null) {
+                log.warn("invoice.paid but invoice is null");
                 return "ok";
             }
 
-            final String txIdFinal = txId;
+            String stripeSubscriptionId = invoice.getSubscription();
+            String paymentIntentId = invoice.getPaymentIntent();
 
-            transactionRepository.findById(txIdFinal).ifPresentOrElse(tx -> {
-                tx.setStatus(TransactionStatus.COMPLETED);
-                if (paymentIntentId != null) tx.setStripePaymentId(paymentIntentId);
-                transactionRepository.save(tx);
+            log.info("🧾 invoice.paid invoiceId={} stripeSubId={} paymentIntent={}",
+                    invoice.getId(), stripeSubscriptionId, paymentIntentId);
 
-                if (stripeSubscriptionId == null || stripeSubscriptionId.isBlank()) {
-                log.warn("invoice.paid but invoice has no subscription id. invoice={}", invoice.getId());
-                return;
-                }
+            if (stripeSubscriptionId == null || stripeSubscriptionId.isBlank()) {
+                log.warn("invoice.paid but missing subscription id. invoiceId={}", invoice.getId());
+                return "ok";
+            }
 
-                subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId).ifPresentOrElse(subEntity -> {
-                subEntity.setStatus(SubscriptionStatus.ACTIVE);
-                subscriptionRepository.save(subEntity);
-                }, () -> log.warn("Subscription not found by stripeSubscriptionId={}", stripeSubscriptionId));
+            // ✅ Update transaction by stripeSubscriptionId (most reliable with your DB design)
+            transactionRepository.findFirstBySubscriptionIdOrderByCreatedAtDesc(stripeSubscriptionId)
+                    .ifPresentOrElse(tx -> {
+                        log.info("🎯 Found tx id={} currentStatus={}", tx.getId(), tx.getStatus());
 
-                log.info("✅ Updated tx COMPLETED and subscription ACTIVE. txId={}, stripeSubId={}",
-                    txIdFinal, stripeSubscriptionId);
+                        tx.setStatus(TransactionStatus.COMPLETED);
+                        if (paymentIntentId != null) tx.setStripePaymentId(paymentIntentId);
+                        transactionRepository.save(tx);
 
-            }, () -> log.warn("invoice.paid but transaction not found by id={}", txIdFinal));
+                        log.info("💾 Updated tx COMPLETED id={}", tx.getId());
+                    }, () -> log.warn("❌ No transaction found for stripeSubId={}", stripeSubscriptionId));
+
+            // ✅ Update subscription entity to ACTIVE
+            subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
+                    .ifPresentOrElse(subEntity -> {
+                        subEntity.setStatus(SubscriptionStatus.ACTIVE);
+                        subscriptionRepository.save(subEntity);
+
+                        log.info("💾 Updated subscription ACTIVE id={} stripeSubId={}",
+                                subEntity.getId(), stripeSubscriptionId);
+                    }, () -> log.warn("❌ Subscription not found by stripeSubscriptionId={}", stripeSubscriptionId));
 
             return "ok";
         }
+
 
 
 
