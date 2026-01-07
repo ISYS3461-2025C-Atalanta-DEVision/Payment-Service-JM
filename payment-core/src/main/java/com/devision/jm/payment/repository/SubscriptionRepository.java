@@ -12,4 +12,8 @@ public interface SubscriptionRepository extends MongoRepository<Subscription, St
     List<Subscription> findByCompanyIdOrderByCreatedAtDesc(String companyId);
 
     Optional<Subscription> findFirstByCompanyIdAndStatusOrderByEndDateDesc(String companyId, SubscriptionStatus status);
+
+    List<Subscription> findByApplicantIdOrderByCreatedAtDesc(String applicantId);
+
+    Optional<Subscription> findFirstByApplicantIdAndStatusOrderByEndDateDesc(String applicantId, SubscriptionStatus status);
 }

@@ -64,13 +64,28 @@ public class PaymentController {
         return ResponseEntity.ok(paymentExternalApi.getCompanyPremiumStatus(companyId));
     }
 
-    // 7) Cancel company subscription (optional)
+    // 6b) Premium status for applicant profile page
+    @GetMapping("/premium/applicant/{applicantId}")
+    public ResponseEntity<PremiumStatusResponse> getApplicantPremiumStatus(@PathVariable String applicantId) {
+        return ResponseEntity.ok(paymentExternalApi.getApplicantPremiumStatus(applicantId));
+    }
+
+    // 7) Cancel company subscription
     @PostMapping("/subscriptions/company/{companyId}/cancel")
     public ResponseEntity<SubscriptionResponse> cancelCompanySubscription(
             @PathVariable String companyId,
             @RequestParam(defaultValue = "false") boolean cancelAtPeriodEnd
     ) {
         return ResponseEntity.ok(paymentExternalApi.cancelCompanySubscription(companyId, cancelAtPeriodEnd));
+    }
+
+    // 7b) Cancel applicant subscription
+    @PostMapping("/subscriptions/applicant/{applicantId}/cancel")
+    public ResponseEntity<SubscriptionResponse> cancelApplicantSubscription(
+            @PathVariable String applicantId,
+            @RequestParam(defaultValue = "false") boolean cancelAtPeriodEnd
+    ) {
+        return ResponseEntity.ok(paymentExternalApi.cancelApplicantSubscription(applicantId, cancelAtPeriodEnd));
     }
 
     @PostMapping("/webhooks/stripe")
@@ -105,10 +120,16 @@ public class PaymentController {
         return ResponseEntity.ok(paymentExternalApi.runExpirationCheckNow());
     }
 
-    // 10) Get all subscriptions
+    // 10) Get all company subscriptions
     @GetMapping("/subscriptions/company/{companyId}")
     public ResponseEntity<List<SubscriptionResponse>> getCompanySubscriptions(@PathVariable String companyId) {
         return ResponseEntity.ok(paymentExternalApi.getCompanySubscriptions(companyId));
+    }
+
+    // 10b) Get all applicant subscriptions
+    @GetMapping("/subscriptions/applicant/{applicantId}")
+    public ResponseEntity<List<SubscriptionResponse>> getApplicantSubscriptions(@PathVariable String applicantId) {
+        return ResponseEntity.ok(paymentExternalApi.getApplicantSubscriptions(applicantId));
     }
 
 }

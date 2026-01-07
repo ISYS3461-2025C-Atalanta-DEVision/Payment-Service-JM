@@ -65,6 +65,8 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
 
         return transactions.stream()
                 .filter(tx -> payerEmail == null || payerEmail.equals(tx.getPayerEmail()))
+                .filter(tx -> companyId == null || companyId.equals(tx.getCompanyId()))
+                .filter(tx -> applicantId == null || applicantId.equals(tx.getApplicantId()))
                 .filter(tx -> status == null || (tx.getStatus() != null && status.equals(tx.getStatus().name())))
                 .map(this::mapToTransactionResponse)
                 .collect(Collectors.toList());
@@ -119,6 +121,35 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
 
         return new PremiumStatusResponse(
                 companyId,
+                isPremium,
+                activeSub.getStatus().name(),
+                activeSub.getEndDate() != null ? activeSub.getEndDate().toString() : null
+        );
+    }
+
+    @Override
+    public PremiumStatusResponse getApplicantPremiumStatus(String applicantId) {
+        log.info("Getting premium status for applicant: {}", applicantId);
+
+        Optional<Subscription> activeOpt
+                = subscriptionRepository.findFirstByApplicantIdAndStatusOrderByEndDateDesc(
+                        applicantId, SubscriptionStatus.ACTIVE
+                );
+
+        if (activeOpt.isEmpty()) {
+            return new PremiumStatusResponse(applicantId, false, "NONE", null);
+        }
+
+        Subscription activeSub = activeOpt.get();
+
+        LocalDate today = LocalDate.now();
+        boolean isPremium
+                = activeSub.getStatus() == SubscriptionStatus.ACTIVE
+                && "PREMIUM".equalsIgnoreCase(activeSub.getPlanType())
+                && (activeSub.getEndDate() == null || !activeSub.getEndDate().isBefore(today));
+
+        return new PremiumStatusResponse(
+                applicantId,
                 isPremium,
                 activeSub.getStatus().name(),
                 activeSub.getEndDate() != null ? activeSub.getEndDate().toString() : null
@@ -196,6 +227,56 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
                 .stream()
                 .map(this::mapToSubscriptionResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SubscriptionResponse> getApplicantSubscriptions(String applicantId) {
+        return subscriptionRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId)
+                .stream()
+                .map(this::mapToSubscriptionResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public SubscriptionResponse cancelApplicantSubscription(String applicantId, boolean cancelAtPeriodEnd) {
+        log.info("Cancelling subscription for applicant: {}, cancelAtPeriodEnd: {}", applicantId, cancelAtPeriodEnd);
+
+        Subscription sub = subscriptionRepository
+                .findFirstByApplicantIdAndStatusOrderByEndDateDesc(applicantId, SubscriptionStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException("No active subscription found for applicant: " + applicantId));
+
+        if (sub.getStripeSubscriptionId() == null || sub.getStripeSubscriptionId().isBlank()) {
+            throw new RuntimeException("Subscription missing stripeSubscriptionId: " + sub.getId());
+        }
+
+        try {
+            Stripe.apiKey = stripeApiKey;
+
+            com.stripe.model.Subscription stripeSub
+                    = com.stripe.model.Subscription.retrieve(sub.getStripeSubscriptionId());
+
+            if (cancelAtPeriodEnd) {
+                com.stripe.param.SubscriptionUpdateParams params
+                        = com.stripe.param.SubscriptionUpdateParams.builder()
+                                .setCancelAtPeriodEnd(true)
+                                .build();
+                stripeSub.update(params);
+
+                sub.setStatus(SubscriptionStatus.CANCELLING);
+            } else {
+                stripeSub.cancel();
+                sub.setStatus(SubscriptionStatus.CANCELLED);
+                sub.setEndDate(LocalDate.now());
+            }
+
+            subscriptionRepository.save(sub);
+            return mapToSubscriptionResponse(sub);
+
+        } catch (Exception e) {
+            log.error("Stripe cancel failed for subId={}, stripeSubId={}",
+                    sub.getId(), sub.getStripeSubscriptionId(), e);
+            throw new RuntimeException("Stripe cancel failed: " + e.getMessage(), e);
+        }
     }
 
 }

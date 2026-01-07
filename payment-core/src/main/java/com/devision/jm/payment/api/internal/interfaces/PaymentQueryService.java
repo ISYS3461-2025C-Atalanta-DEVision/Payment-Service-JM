@@ -17,9 +17,15 @@ public interface PaymentQueryService {
 
     PremiumStatusResponse getCompanyPremiumStatus(String companyId);
 
+    PremiumStatusResponse getApplicantPremiumStatus(String applicantId);
+
     SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd);
 
     List<SubscriptionResponse> getCompanySubscriptions(String companyId);
+
+    List<SubscriptionResponse> getApplicantSubscriptions(String applicantId);
+
+    SubscriptionResponse cancelApplicantSubscription(String applicantId, boolean cancelAtPeriodEnd);
 
 
 }

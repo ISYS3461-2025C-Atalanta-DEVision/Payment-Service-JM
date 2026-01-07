@@ -23,12 +23,18 @@ public interface PaymentExternalApi {
 
     PremiumStatusResponse getCompanyPremiumStatus(String companyId);
 
+    PremiumStatusResponse getApplicantPremiumStatus(String applicantId);
+
     SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd);
+
+    List<SubscriptionResponse> getCompanySubscriptions(String companyId);
+
+    List<SubscriptionResponse> getApplicantSubscriptions(String applicantId);
+
+    SubscriptionResponse cancelApplicantSubscription(String applicantId, boolean cancelAtPeriodEnd);
 
     void handleStripeWebhook(String payload, String stripeSignature);
 
     ExpirationCheckResponse runExpirationCheckNow();
-
-    List<SubscriptionResponse> getCompanySubscriptions(String companyId);
 
 }

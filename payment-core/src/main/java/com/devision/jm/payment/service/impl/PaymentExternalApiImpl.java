@@ -88,8 +88,28 @@ public class PaymentExternalApiImpl implements PaymentExternalApi {
     }
 
     @Override
+    public PremiumStatusResponse getApplicantPremiumStatus(String applicantId) {
+        return paymentQueryService.getApplicantPremiumStatus(applicantId);
+    }
+
+    @Override
     public SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd) {
         return paymentQueryService.cancelCompanySubscription(companyId, cancelAtPeriodEnd);
+    }
+
+    @Override
+    public List<SubscriptionResponse> getCompanySubscriptions(String companyId) {
+        return paymentQueryService.getCompanySubscriptions(companyId);
+    }
+
+    @Override
+    public List<SubscriptionResponse> getApplicantSubscriptions(String applicantId) {
+        return paymentQueryService.getApplicantSubscriptions(applicantId);
+    }
+
+    @Override
+    public SubscriptionResponse cancelApplicantSubscription(String applicantId, boolean cancelAtPeriodEnd) {
+        return paymentQueryService.cancelApplicantSubscription(applicantId, cancelAtPeriodEnd);
     }
 
     @Override
@@ -100,11 +120,6 @@ public class PaymentExternalApiImpl implements PaymentExternalApi {
     @Override
     public ExpirationCheckResponse runExpirationCheckNow() {
         return expirationService.runNow();
-    }
-
-    @Override
-    public List<SubscriptionResponse> getCompanySubscriptions(String companyId) {
-        return paymentQueryService.getCompanySubscriptions(companyId);
     }
 
 }

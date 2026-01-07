@@ -58,6 +58,8 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
         tx.setAmount(unitAmount);
         tx.setCurrency("USD");
         tx.setPayerEmail(command.getPayerEmail());
+        tx.setCompanyId(command.getCompanyId());
+        tx.setApplicantId(command.getApplicantId());
         tx.setStatus(TransactionStatus.PENDING);
         tx = transactionRepository.save(tx);
 

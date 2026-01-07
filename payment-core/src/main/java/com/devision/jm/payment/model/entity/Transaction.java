@@ -10,6 +10,9 @@ public class Transaction extends BaseEntity {
     // Reference to subscription document id
     private String subscriptionId;
 
+    private String companyId;
+    private String applicantId;
+
     private Long amount;     // store cents
     private String currency;
 
@@ -74,6 +77,22 @@ public class Transaction extends BaseEntity {
 
     public void setStatus(TransactionStatus status) {
         this.status = status;
+    }
+
+    public String getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(String companyId) {
+        this.companyId = companyId;
+    }
+
+    public String getApplicantId() {
+        return applicantId;
+    }
+
+    public void setApplicantId(String applicantId) {
+        this.applicantId = applicantId;
     }
 
 }
