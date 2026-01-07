@@ -70,14 +70,32 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
     public void publishSubscriptionNotificationEvent(SubscriptionNotificationEvent event) {
         try {
             String eventJson = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(SUBSCRIPTION_NOTIFICATIONS_TOPIC, event.getUserId(), eventJson);
+
+            log.info("========== PUBLISHING SUBSCRIPTION NOTIFICATION EVENT ==========");
+            log.info("Topic: {}", SUBSCRIPTION_NOTIFICATIONS_TOPIC);
+            log.info("EventType: {}", event.getEventType());
+            log.info("UserId: {}", event.getUserId());
+            log.info("PlanType: {}", event.getPlanType());
+            log.info("EndDate: {}", event.getEndDate());
+            log.info("DaysLeft: {}", event.getDaysLeft());
+            log.info("================================================================");
+
+            kafkaTemplate.send(SUBSCRIPTION_NOTIFICATIONS_TOPIC, event.getUserId(), eventJson)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Subscription notification event published successfully for userId: {}, eventType: {}",
+                                    event.getUserId(), event.getEventType());
+                        } else {
+                            log.error("Failed to publish subscription notification event for userId: {}, eventType: {}. Error: {}",
+                                    event.getUserId(), event.getEventType(), ex.getMessage());
+                        }
+                    });
+
         } catch (Exception e) {
+            log.error("Error serializing subscription notification event for userId: {}, eventType: {}. Error: {}",
+                    event.getUserId(), event.getEventType(), e.getMessage());
             throw new RuntimeException("Failed to publish subscription notification event", e);
         }
-        
-        log.info("📣 Publishing SubscriptionNotificationEvent type={} userId={} endDate={} daysLeft={}",
-        event.getEventType(), event.getUserId(), event.getEndDate(), event.getDaysLeft());
-
     }
 
 }
