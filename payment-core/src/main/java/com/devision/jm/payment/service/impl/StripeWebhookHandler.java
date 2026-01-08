@@ -120,7 +120,7 @@ public class StripeWebhookHandler implements StripeWebhookService {
             String stripeSubscriptionId = invoice.getSubscription();
             String paymentIntentId = invoice.getPaymentIntent();
 
-            log.info("🧾 invoice.paid invoiceId={} stripeSubId={} paymentIntentId={}",
+            log.info("invoice.paid invoiceId={} stripeSubId={} paymentIntentId={}",
                 invoice.getId(), stripeSubscriptionId, paymentIntentId);
 
             if (stripeSubscriptionId == null || stripeSubscriptionId.isBlank()) {
@@ -131,7 +131,7 @@ public class StripeWebhookHandler implements StripeWebhookService {
             // Update transaction by stripeSubscriptionId
             transactionRepository.findFirstBySubscriptionIdOrderByCreatedAtDesc(stripeSubscriptionId)
                 .ifPresentOrElse(tx -> {
-                log.info("🎯 Found tx id={} oldStatus={}", tx.getId(), tx.getStatus());
+                log.info("Found tx id={} oldStatus={}", tx.getId(), tx.getStatus());
 
                 tx.setStatus(TransactionStatus.COMPLETED);
                 if (paymentIntentId != null) tx.setStripePaymentId(paymentIntentId);
@@ -140,7 +140,7 @@ public class StripeWebhookHandler implements StripeWebhookService {
                 log.info("✅ Updated tx COMPLETED id={}", tx.getId());
                 }, () -> log.warn("❌ No tx found for stripeSubId={}", stripeSubscriptionId));
 
-            // Update subscription ACTIVE
+            // Update subscription ACTIVE and publish Kafka event
             subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
                 .ifPresentOrElse(subEntity -> {
                 subEntity.setStatus(SubscriptionStatus.ACTIVE);
@@ -148,6 +148,25 @@ public class StripeWebhookHandler implements StripeWebhookService {
 
                 log.info("✅ Updated subscription ACTIVE id={} stripeSubId={}",
                     subEntity.getId(), stripeSubscriptionId);
+
+                // Publish Kafka event to notify Profile Service
+                if (kafkaProducerService != null) {
+                    String userId = subEntity.getCompanyId() != null
+                        ? subEntity.getCompanyId()
+                        : subEntity.getApplicantId();
+
+                    if (userId != null) {
+                        PaymentCompletedEvent paymentEvent = PaymentCompletedEvent.builder()
+                            .userId(userId)
+                            .planType(subEntity.getPlanType())
+                            .paidAt(LocalDateTime.now())
+                            .build();
+                        kafkaProducerService.publishPaymentCompletedEvent(paymentEvent);
+                        log.info("📤 Published PaymentCompletedEvent for userId={}", userId);
+                    } else {
+                        log.warn("⚠️ Cannot publish PaymentCompletedEvent: no companyId or applicantId");
+                    }
+                }
                 }, () -> log.warn("❌ Subscription not found for stripeSubId={}", stripeSubscriptionId));
 
             return "ok";
