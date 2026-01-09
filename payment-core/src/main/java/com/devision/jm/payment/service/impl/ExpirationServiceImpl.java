@@ -46,8 +46,7 @@ public class ExpirationServiceImpl implements ExpirationService {
         int expiredCount = 0;
 
         for (Subscription sub : allSubscriptions) {
-            if (sub.getStatus() != SubscriptionStatus.ACTIVE
-                && sub.getStatus() != SubscriptionStatus.CANCELLING) {
+            if (sub.getStatus() != SubscriptionStatus.ACTIVE) {
                 continue;
             }
 
