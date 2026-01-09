@@ -1,6 +1,7 @@
 package com.devision.jm.payment.service.impl;
 
 import com.devision.jm.payment.api.internal.dto.PaymentCompletedEvent;
+import com.devision.jm.payment.api.internal.dto.SubscriptionCancelledEvent;
 import com.devision.jm.payment.api.internal.dto.events.SubscriptionNotificationEvent;
 import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -98,4 +99,38 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
         }
     }
 
+    //subscription cancelled event
+    private static final String SUBSCRIPTION_CANCELLED_TOPIC = "subscription-cancelled";
+
+    @Override
+    public void publishSubscriptionCancelledEvent(SubscriptionCancelledEvent event) {
+        try {
+            String eventJson = objectMapper.writeValueAsString(event);
+
+            log.info("========== PUBLISHING SUBSCRIPTION CANCELLED EVENT ==========");
+            log.info("Topic: {}", SUBSCRIPTION_CANCELLED_TOPIC);
+            log.info("UserId: {}", event.getUserId());
+            log.info("CompanyId: {}", event.getCompanyId());
+            log.info("PreviousPlanType: {}", event.getPreviousPlanType());
+            log.info("CancelledAt: {}", event.getCancelledAt());
+            log.info("==============================================================");
+
+            String key = event.getUserId() != null ? event.getUserId() : event.getCompanyId();
+            kafkaTemplate.send(SUBSCRIPTION_CANCELLED_TOPIC, key, eventJson)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Subscription cancelled event published successfully for userId: {}",
+                                    event.getUserId());
+                        } else {
+                            log.error("Failed to publish subscription cancelled event for userId: {}. Error: {}",
+                                    event.getUserId(), ex.getMessage());
+                        }
+                    });
+
+        } catch (Exception e) {
+            log.error("Error serializing subscription cancelled event for userId: {}. Error: {}",
+                    event.getUserId(), e.getMessage());
+            throw new RuntimeException("Failed to publish subscription cancelled event", e);
+        }
+    }
 }

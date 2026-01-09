@@ -3,6 +3,8 @@ package com.devision.jm.payment.service.impl;
 import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
 import com.devision.jm.payment.api.external.dto.SubscriptionResponse;
 import com.devision.jm.payment.api.external.dto.TransactionResponse;
+import com.devision.jm.payment.api.internal.dto.SubscriptionCancelledEvent;
+import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
 import com.devision.jm.payment.api.internal.interfaces.PaymentQueryService;
 import com.devision.jm.payment.model.entity.Subscription;
 import com.devision.jm.payment.model.entity.Transaction;
@@ -11,10 +13,12 @@ import com.devision.jm.payment.repository.SubscriptionRepository;
 import com.devision.jm.payment.repository.TransactionRepository;
 import com.stripe.Stripe;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -30,15 +34,19 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
 
     private final TransactionRepository transactionRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final KafkaProducerService kafkaProducerService;
 
     @Value("${stripe.secret-key:}")
     private String stripeApiKey;
 
+    @Autowired
     public PaymentQueryServiceImpl(
             TransactionRepository transactionRepository,
-            SubscriptionRepository subscriptionRepository) {
+            SubscriptionRepository subscriptionRepository,
+            @Autowired(required = false) KafkaProducerService kafkaProducerService) {
         this.transactionRepository = transactionRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.kafkaProducerService = kafkaProducerService;
     }
 
     @Override
@@ -159,7 +167,7 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
 
     @Override
     public SubscriptionResponse cancelCompanySubscription(String companyId, boolean cancelAtPeriodEnd) {
-        log.info("Cancelling subscription for company: {}, cancelAtPeriodEnd: {}", companyId, cancelAtPeriodEnd);
+        log.info("Cancelling subscription for company: {}", companyId);
 
         Subscription sub = subscriptionRepository
                 .findFirstByCompanyIdAndStatusOrderByEndDateDesc(companyId, SubscriptionStatus.ACTIVE)
@@ -175,21 +183,26 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
             com.stripe.model.Subscription stripeSub
                     = com.stripe.model.Subscription.retrieve(sub.getStripeSubscriptionId());
 
-            if (cancelAtPeriodEnd) {
-                com.stripe.param.SubscriptionUpdateParams params
-                        = com.stripe.param.SubscriptionUpdateParams.builder()
-                                .setCancelAtPeriodEnd(true)
-                                .build();
-                stripeSub.update(params);
+            // Always cancel immediately in Stripe
+            stripeSub.cancel();
 
-                sub.setStatus(SubscriptionStatus.CANCELLING);
-            } else {
-                stripeSub.cancel();
-                sub.setStatus(SubscriptionStatus.CANCELLED);
-                sub.setEndDate(LocalDate.now());
-            }
+            // Always set status to CANCELLED
+            sub.setStatus(SubscriptionStatus.CANCELLED);
+            sub.setEndDate(LocalDate.now());
 
             subscriptionRepository.save(sub);
+
+            // Publish Kafka event to notify Profile Service
+            if (kafkaProducerService != null) {
+                SubscriptionCancelledEvent event = SubscriptionCancelledEvent.builder()
+                        .userId(companyId)
+                        .companyId(companyId)
+                        .previousPlanType(sub.getPlanType())
+                        .cancelledAt(LocalDateTime.now())
+                        .build();
+                kafkaProducerService.publishSubscriptionCancelledEvent(event);
+            }
+
             return mapToSubscriptionResponse(sub);
 
         } catch (Exception e) {
@@ -239,7 +252,7 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
 
     @Override
     public SubscriptionResponse cancelApplicantSubscription(String applicantId, boolean cancelAtPeriodEnd) {
-        log.info("Cancelling subscription for applicant: {}, cancelAtPeriodEnd: {}", applicantId, cancelAtPeriodEnd);
+        log.info("Cancelling subscription for applicant: {}", applicantId);
 
         Subscription sub = subscriptionRepository
                 .findFirstByApplicantIdAndStatusOrderByEndDateDesc(applicantId, SubscriptionStatus.ACTIVE)
@@ -255,21 +268,26 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
             com.stripe.model.Subscription stripeSub
                     = com.stripe.model.Subscription.retrieve(sub.getStripeSubscriptionId());
 
-            if (cancelAtPeriodEnd) {
-                com.stripe.param.SubscriptionUpdateParams params
-                        = com.stripe.param.SubscriptionUpdateParams.builder()
-                                .setCancelAtPeriodEnd(true)
-                                .build();
-                stripeSub.update(params);
+            // Always cancel immediately in Stripe
+            stripeSub.cancel();
 
-                sub.setStatus(SubscriptionStatus.CANCELLING);
-            } else {
-                stripeSub.cancel();
-                sub.setStatus(SubscriptionStatus.CANCELLED);
-                sub.setEndDate(LocalDate.now());
-            }
+            // Always set status to CANCELLED
+            sub.setStatus(SubscriptionStatus.CANCELLED);
+            sub.setEndDate(LocalDate.now());
 
             subscriptionRepository.save(sub);
+
+            // Publish Kafka event to notify Profile Service
+            if (kafkaProducerService != null) {
+                SubscriptionCancelledEvent event = SubscriptionCancelledEvent.builder()
+                        .userId(applicantId)
+                        .applicantId(applicantId)
+                        .previousPlanType(sub.getPlanType())
+                        .cancelledAt(LocalDateTime.now())
+                        .build();
+                kafkaProducerService.publishSubscriptionCancelledEvent(event);
+            }
+
             return mapToSubscriptionResponse(sub);
 
         } catch (Exception e) {
