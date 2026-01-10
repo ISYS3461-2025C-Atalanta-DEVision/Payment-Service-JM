@@ -31,8 +31,11 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     @Value("${stripe.secret-key}")
     private String secretKey;
 
-    @Value("${stripe.price-id}")
-    private String priceId;
+    @Value("${stripe.company-price-id}")
+    private String companyPriceId;
+
+    @Value("${stripe.applicant-price-id}")
+    private String applicantPriceId;
 
     private final TransactionRepository transactionRepository;
     private final SubscriptionRepository subscriptionRepository;
@@ -50,7 +53,7 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
         Stripe.apiKey = secretKey;
         validateCommand(command);
 
-        long unitAmount = amountForPlan(command.getPlanType(), "usd");
+        long unitAmount = amountForPlan(command);
 
         // 1) tạo Transaction PENDING trước
         Transaction tx = new Transaction();
@@ -71,8 +74,8 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
                             .build()
             );
 
-            // 3) chọn priceId theo currency
-            String priceId = resolvePriceId(command.getCurrency());
+            // 3) chọn priceId theo user type (company $30, applicant $10)
+            String priceId = resolvePriceId(command);
 
             // 4) tạo Stripe Subscription (default_incomplete) + expand PI
             SubscriptionCreateParams params = SubscriptionCreateParams.builder()
@@ -174,11 +177,20 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
         }
     }
 
-    private String resolvePriceId(String currency) {
-        if (priceId == null || priceId.isBlank()) {
-            throw new IllegalArgumentException("Missing stripe.price-id in config");
+    private String resolvePriceId(CreateSubscriptionCommand command) {
+        boolean isApplicant = command.getApplicantId() != null && !command.getApplicantId().isBlank();
+
+        if (isApplicant) {
+            if (applicantPriceId == null || applicantPriceId.isBlank()) {
+                throw new IllegalArgumentException("Missing stripe.applicant-price-id in config");
+            }
+            return applicantPriceId;
+        } else {
+            if (companyPriceId == null || companyPriceId.isBlank()) {
+                throw new IllegalArgumentException("Missing stripe.company-price-id in config");
+            }
+            return companyPriceId;
         }
-        return priceId;
     }
 
     private void validateCommand(CreateSubscriptionCommand command) {
@@ -203,8 +215,9 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
     }
 
 
-    private long amountForPlan(String planType, String currency) {
-        // $30 USD = 3000 cents
-        return 3000L;
+    private long amountForPlan(CreateSubscriptionCommand command) {
+        boolean isApplicant = command.getApplicantId() != null && !command.getApplicantId().isBlank();
+        // Company: $30 USD = 3000 cents, Applicant: $10 USD = 1000 cents
+        return isApplicant ? 1000L : 3000L;
     }
 }

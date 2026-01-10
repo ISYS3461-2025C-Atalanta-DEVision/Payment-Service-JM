@@ -87,7 +87,8 @@ jwe:
 stripe:
   secret-key: ${STRIPE_SECRET_KEY}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET}
-  price-id: ${STRIPE_PRICE_ID}
+  company-price-id: ${STRIPE_PRICE_ID}
+  applicant-price-id: ${STRIPE_APPLICANT_PRICE_ID}
 
 # Application Configuration
 app:
