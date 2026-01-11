@@ -3,6 +3,9 @@ package com.devision.jm.payment.service.impl;
 import com.devision.jm.payment.api.internal.dto.PaymentCompletedEvent;
 import com.devision.jm.payment.api.internal.dto.SubscriptionCancelledEvent;
 import com.devision.jm.payment.api.internal.dto.events.SubscriptionNotificationEvent;
+import com.devision.jm.payment.api.internal.dto.ja.PremiumJACreatedEvent;
+import com.devision.jm.payment.api.internal.dto.ja.PremiumJAExpiredEvent;
+import com.devision.jm.payment.api.internal.dto.ja.PremiumJAClosedEvent;
 import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -131,6 +134,104 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
             log.error("Error serializing subscription cancelled event for userId: {}. Error: {}",
                     event.getUserId(), e.getMessage());
             throw new RuntimeException("Failed to publish subscription cancelled event", e);
+        }
+    }
+
+    // ==================== JA Team Events ====================
+
+    private static final String PREMIUM_JA_CREATED_TOPIC = "subscription.premium.ja.created";
+    private static final String PREMIUM_JA_EXPIRED_TOPIC = "subscription.premium.ja.expired";
+    private static final String PREMIUM_JA_CLOSED_TOPIC = "subscription.premium.ja.closed";
+
+    @Override
+    public void publishPremiumJACreatedEvent(PremiumJACreatedEvent event) {
+        try {
+            String eventJson = objectMapper.writeValueAsString(event);
+
+            log.info("========== PUBLISHING PREMIUM JA CREATED EVENT ==========");
+            log.info("Topic: {}", PREMIUM_JA_CREATED_TOPIC);
+            log.info("ApplicantId: {}", event.getApplicantId());
+            log.info("SubscriptionId: {}", event.getSubscriptionId());
+            log.info("SubscriptionTier: {}", event.getSubscriptionTier());
+            log.info("StartDate: {}", event.getStartDate());
+            log.info("EndDate: {}", event.getEndDate());
+            log.info("==========================================================");
+
+            kafkaTemplate.send(PREMIUM_JA_CREATED_TOPIC, event.getApplicantId(), eventJson)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Premium JA created event published successfully for applicantId: {}",
+                                    event.getApplicantId());
+                        } else {
+                            log.error("Failed to publish premium JA created event for applicantId: {}. Error: {}",
+                                    event.getApplicantId(), ex.getMessage());
+                        }
+                    });
+
+        } catch (Exception e) {
+            log.error("Error serializing premium JA created event for applicantId: {}. Error: {}",
+                    event.getApplicantId(), e.getMessage());
+            throw new RuntimeException("Failed to publish premium JA created event", e);
+        }
+    }
+
+    @Override
+    public void publishPremiumJAExpiredEvent(PremiumJAExpiredEvent event) {
+        try {
+            String eventJson = objectMapper.writeValueAsString(event);
+
+            log.info("========== PUBLISHING PREMIUM JA EXPIRED EVENT ==========");
+            log.info("Topic: {}", PREMIUM_JA_EXPIRED_TOPIC);
+            log.info("ApplicantId: {}", event.getApplicantId());
+            log.info("SubscriptionId: {}", event.getSubscriptionId());
+            log.info("ExpiredAt: {}", event.getExpiredAt());
+            log.info("==========================================================");
+
+            kafkaTemplate.send(PREMIUM_JA_EXPIRED_TOPIC, event.getApplicantId(), eventJson)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Premium JA expired event published successfully for applicantId: {}",
+                                    event.getApplicantId());
+                        } else {
+                            log.error("Failed to publish premium JA expired event for applicantId: {}. Error: {}",
+                                    event.getApplicantId(), ex.getMessage());
+                        }
+                    });
+
+        } catch (Exception e) {
+            log.error("Error serializing premium JA expired event for applicantId: {}. Error: {}",
+                    event.getApplicantId(), e.getMessage());
+            throw new RuntimeException("Failed to publish premium JA expired event", e);
+        }
+    }
+
+    @Override
+    public void publishPremiumJAClosedEvent(PremiumJAClosedEvent event) {
+        try {
+            String eventJson = objectMapper.writeValueAsString(event);
+
+            log.info("========== PUBLISHING PREMIUM JA CLOSED EVENT ==========");
+            log.info("Topic: {}", PREMIUM_JA_CLOSED_TOPIC);
+            log.info("ApplicantId: {}", event.getApplicantId());
+            log.info("SubscriptionId: {}", event.getSubscriptionId());
+            log.info("ClosedAt: {}", event.getClosedAt());
+            log.info("=========================================================");
+
+            kafkaTemplate.send(PREMIUM_JA_CLOSED_TOPIC, event.getApplicantId(), eventJson)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Premium JA closed event published successfully for applicantId: {}",
+                                    event.getApplicantId());
+                        } else {
+                            log.error("Failed to publish premium JA closed event for applicantId: {}. Error: {}",
+                                    event.getApplicantId(), ex.getMessage());
+                        }
+                    });
+
+        } catch (Exception e) {
+            log.error("Error serializing premium JA closed event for applicantId: {}. Error: {}",
+                    event.getApplicantId(), e.getMessage());
+            throw new RuntimeException("Failed to publish premium JA closed event", e);
         }
     }
 }

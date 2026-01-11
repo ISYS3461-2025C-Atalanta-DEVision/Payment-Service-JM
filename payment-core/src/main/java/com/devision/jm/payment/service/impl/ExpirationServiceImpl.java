@@ -2,6 +2,7 @@ package com.devision.jm.payment.service.impl;
 
 import com.devision.jm.payment.api.external.dto.ExpirationCheckResponse;
 import com.devision.jm.payment.api.internal.dto.events.SubscriptionNotificationEvent;
+import com.devision.jm.payment.api.internal.dto.ja.PremiumJAExpiredEvent;
 import com.devision.jm.payment.api.internal.interfaces.ExpirationService;
 import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
 import com.devision.jm.payment.model.entity.Subscription;
@@ -92,6 +93,18 @@ public class ExpirationServiceImpl implements ExpirationService {
                             .occurredAt(LocalDateTime.now())
                             .build()
                     );
+
+                    // Publish JA team expired event if this is an applicant subscription
+                    if (sub.getApplicantId() != null && !sub.getApplicantId().isBlank()) {
+                        PremiumJAExpiredEvent jaEvent = PremiumJAExpiredEvent.builder()
+                            .applicantId(sub.getApplicantId())
+                            .subscriptionId(sub.getStripeSubscriptionId())
+                            .expiredAt(LocalDateTime.now().toString())
+                            .build();
+                        kafkaProducerService.publishPremiumJAExpiredEvent(jaEvent);
+                        log.info("📤 Published PremiumJAExpiredEvent for applicantId={}", sub.getApplicantId());
+                    }
+
                     sub.setEndedNotifiedOn(today);
                     sub.setStatus(SubscriptionStatus.EXPIRED);
                     subscriptionRepository.save(sub);

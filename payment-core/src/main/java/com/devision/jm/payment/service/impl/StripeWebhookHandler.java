@@ -1,6 +1,7 @@
 package com.devision.jm.payment.service.impl;
 
 import com.devision.jm.payment.api.internal.dto.PaymentCompletedEvent;
+import com.devision.jm.payment.api.internal.dto.ja.PremiumJACreatedEvent;
 import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
 import com.devision.jm.payment.model.enums.SubscriptionStatus;
 import com.devision.jm.payment.model.enums.TransactionStatus;
@@ -163,6 +164,19 @@ public class StripeWebhookHandler implements StripeWebhookService {
                             .build();
                         kafkaProducerService.publishPaymentCompletedEvent(paymentEvent);
                         log.info("📤 Published PaymentCompletedEvent for userId={}", userId);
+
+                        // Publish JA team event if this is an applicant subscription
+                        if (subEntity.getApplicantId() != null && !subEntity.getApplicantId().isBlank()) {
+                            PremiumJACreatedEvent jaEvent = PremiumJACreatedEvent.builder()
+                                .applicantId(subEntity.getApplicantId())
+                                .subscriptionId(subEntity.getStripeSubscriptionId())
+                                .subscriptionTier("PREMIUM")
+                                .startDate(subEntity.getStartDate() != null ? subEntity.getStartDate().toString() : LocalDate.now().toString())
+                                .endDate(subEntity.getEndDate() != null ? subEntity.getEndDate().toString() : LocalDate.now().plusMonths(1).toString())
+                                .build();
+                            kafkaProducerService.publishPremiumJACreatedEvent(jaEvent);
+                            log.info("📤 Published PremiumJACreatedEvent for applicantId={}", subEntity.getApplicantId());
+                        }
                     } else {
                         log.warn("⚠️ Cannot publish PaymentCompletedEvent: no companyId or applicantId");
                     }

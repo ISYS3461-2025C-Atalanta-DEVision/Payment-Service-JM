@@ -4,6 +4,7 @@ import com.devision.jm.payment.api.external.dto.PremiumStatusResponse;
 import com.devision.jm.payment.api.external.dto.SubscriptionResponse;
 import com.devision.jm.payment.api.external.dto.TransactionResponse;
 import com.devision.jm.payment.api.internal.dto.SubscriptionCancelledEvent;
+import com.devision.jm.payment.api.internal.dto.ja.PremiumJAClosedEvent;
 import com.devision.jm.payment.api.internal.interfaces.KafkaProducerService;
 import com.devision.jm.payment.api.internal.interfaces.PaymentQueryService;
 import com.devision.jm.payment.model.entity.Subscription;
@@ -286,6 +287,15 @@ public class PaymentQueryServiceImpl implements PaymentQueryService {
                         .cancelledAt(LocalDateTime.now())
                         .build();
                 kafkaProducerService.publishSubscriptionCancelledEvent(event);
+
+                // Publish JA team closed event
+                PremiumJAClosedEvent jaEvent = PremiumJAClosedEvent.builder()
+                        .applicantId(applicantId)
+                        .subscriptionId(sub.getStripeSubscriptionId())
+                        .closedAt(LocalDateTime.now().toString())
+                        .build();
+                kafkaProducerService.publishPremiumJAClosedEvent(jaEvent);
+                log.info("📤 Published PremiumJAClosedEvent for applicantId={}", applicantId);
             }
 
             return mapToSubscriptionResponse(sub);

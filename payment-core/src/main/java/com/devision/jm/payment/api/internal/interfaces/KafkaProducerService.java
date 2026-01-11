@@ -3,6 +3,9 @@ package com.devision.jm.payment.api.internal.interfaces;
 import com.devision.jm.payment.api.internal.dto.PaymentCompletedEvent;
 import com.devision.jm.payment.api.internal.dto.SubscriptionCancelledEvent;
 import com.devision.jm.payment.api.internal.dto.events.SubscriptionNotificationEvent;
+import com.devision.jm.payment.api.internal.dto.ja.PremiumJACreatedEvent;
+import com.devision.jm.payment.api.internal.dto.ja.PremiumJAExpiredEvent;
+import com.devision.jm.payment.api.internal.dto.ja.PremiumJAClosedEvent;
 
 /**
  * Kafka Producer Service Interface
@@ -37,4 +40,33 @@ public interface KafkaProducerService {
      * @param event the subscription cancelled event
      */
     void publishSubscriptionCancelledEvent(SubscriptionCancelledEvent event);
+
+    // ==================== JA Team Events ====================
+
+    /**
+     * Publish premium JA created event to Kafka
+     * Topic: subscription.premium.ja.created
+     * Consumer: JA team services (sets applicant.isPremium = true)
+     *
+     * @param event the premium JA created event
+     */
+    void publishPremiumJACreatedEvent(PremiumJACreatedEvent event);
+
+    /**
+     * Publish premium JA expired event to Kafka
+     * Topic: subscription.premium.ja.expired
+     * Consumer: JA team services (sets applicant.isPremium = false)
+     *
+     * @param event the premium JA expired event
+     */
+    void publishPremiumJAExpiredEvent(PremiumJAExpiredEvent event);
+
+    /**
+     * Publish premium JA closed event to Kafka
+     * Topic: subscription.premium.ja.closed
+     * Consumer: JA team services (sets applicant.isPremium = false)
+     *
+     * @param event the premium JA closed event
+     */
+    void publishPremiumJAClosedEvent(PremiumJAClosedEvent event);
 }
