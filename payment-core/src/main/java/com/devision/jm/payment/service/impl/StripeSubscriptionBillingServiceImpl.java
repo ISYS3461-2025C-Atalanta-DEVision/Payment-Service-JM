@@ -126,7 +126,7 @@ public class StripeSubscriptionBillingServiceImpl implements SubscriptionBilling
             String stripePaymentIntentId = pi.getId();
 
             // 6) update transaction mapping
-            // NOTE: bạn đang dùng field "subscriptionId" để chứa stripeSubscriptionId (ok, miễn consistent)
+            // NOTE: bạn đang dùng field "subscriptionId" để chứa stripeSubscriptionId
             tx.setSubscriptionId(stripeSubscriptionId);
             tx.setStripePaymentId(stripePaymentIntentId);
             tx = transactionRepository.save(tx);

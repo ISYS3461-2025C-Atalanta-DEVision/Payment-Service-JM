@@ -138,8 +138,8 @@ public class StripeWebhookHandler implements StripeWebhookService {
                 if (paymentIntentId != null) tx.setStripePaymentId(paymentIntentId);
                 transactionRepository.save(tx);
 
-                log.info("✅ Updated tx COMPLETED id={}", tx.getId());
-                }, () -> log.warn("❌ No tx found for stripeSubId={}", stripeSubscriptionId));
+                log.info(" Updated tx COMPLETED id={}", tx.getId());
+                }, () -> log.warn("No tx found for stripeSubId={}", stripeSubscriptionId));
 
             // Update subscription ACTIVE and publish Kafka event
             subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
@@ -147,7 +147,7 @@ public class StripeWebhookHandler implements StripeWebhookService {
                 subEntity.setStatus(SubscriptionStatus.ACTIVE);
                 subscriptionRepository.save(subEntity);
 
-                log.info("✅ Updated subscription ACTIVE id={} stripeSubId={}",
+                log.info(" Updated subscription ACTIVE id={} stripeSubId={}",
                     subEntity.getId(), stripeSubscriptionId);
 
                 // Publish Kafka event to notify Profile Service
@@ -163,7 +163,7 @@ public class StripeWebhookHandler implements StripeWebhookService {
                             .paidAt(LocalDateTime.now())
                             .build();
                         kafkaProducerService.publishPaymentCompletedEvent(paymentEvent);
-                        log.info("📤 Published PaymentCompletedEvent for userId={}", userId);
+                        log.info(" Published PaymentCompletedEvent for userId={}", userId);
 
                         // Publish JA team event if this is an applicant subscription
                         if (subEntity.getApplicantId() != null && !subEntity.getApplicantId().isBlank()) {
@@ -175,13 +175,13 @@ public class StripeWebhookHandler implements StripeWebhookService {
                                 .endDate(subEntity.getEndDate() != null ? subEntity.getEndDate().toString() : LocalDate.now().plusMonths(1).toString())
                                 .build();
                             kafkaProducerService.publishPremiumJACreatedEvent(jaEvent);
-                            log.info("📤 Published PremiumJACreatedEvent for applicantId={}", subEntity.getApplicantId());
+                            log.info("Published PremiumJACreatedEvent for applicantId={}", subEntity.getApplicantId());
                         }
                     } else {
-                        log.warn("⚠️ Cannot publish PaymentCompletedEvent: no companyId or applicantId");
+                        log.warn("Cannot publish PaymentCompletedEvent: no companyId or applicantId");
                     }
                 }
-                }, () -> log.warn("❌ Subscription not found for stripeSubId={}", stripeSubscriptionId));
+                }, () -> log.warn("Subscription not found for stripeSubId={}", stripeSubscriptionId));
 
             return "ok";
         }

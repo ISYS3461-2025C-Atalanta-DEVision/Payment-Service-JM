@@ -75,7 +75,7 @@ public class ExpirationServiceImpl implements ExpirationService {
                     endingSoonNotified++;
                 }
 
-                log.info("🔔 EXPIRATION EVENT {} userId={} plan={} endDate={} today={}",
+                log.info(" EXPIRATION EVENT {} userId={} plan={} endDate={} today={}",
         "ENDING_SOON", userId, sub.getPlanType(), endDate, today);
 
             }
@@ -102,7 +102,7 @@ public class ExpirationServiceImpl implements ExpirationService {
                             .expiredAt(LocalDateTime.now().toString())
                             .build();
                         kafkaProducerService.publishPremiumJAExpiredEvent(jaEvent);
-                        log.info("📤 Published PremiumJAExpiredEvent for applicantId={}", sub.getApplicantId());
+                        log.info(" Published PremiumJAExpiredEvent for applicantId={}", sub.getApplicantId());
                     }
 
                     sub.setEndedNotifiedOn(today);
@@ -111,7 +111,7 @@ public class ExpirationServiceImpl implements ExpirationService {
                     endedNotified++;
                     expiredCount++;
                 }
-                log.info("🔔 EXPIRATION EVENT {} userId={} plan={} endDate={} today={}",
+                log.info(" EXPIRATION EVENT {} userId={} plan={} endDate={} today={}",
         "ENDED", userId, sub.getPlanType(), endDate, today);
 
             }
